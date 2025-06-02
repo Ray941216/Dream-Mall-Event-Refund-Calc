@@ -58,6 +58,38 @@
     </nav>
 
     <main class="container">
+        <!-- 新增活動 Modal -->
+        <div id="modal-activity-form" class="modal">
+            <div class="modal-content">
+                <h5 id="modal-title">新增活動</h5>
+                <div class="row">
+                    <form id="activity-form" class="col s12">
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input id="input-C" type="number" min="1" required />
+                                <label for="input-C">滿額門檻 C (元)</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input id="input-R" type="number" min="1" required />
+                                <label for="input-R">回饋金額 R (元)</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="input-field col s12">
+                                <input id="input-N" type="number" min="0" />
+                                <label for="input-N">每日限領份數 N (0 表示無限)</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="#!" id="modal-save-btn" class="modal-close waves-effect waves-green btn">儲存</a>
+                <a href="#!" class="modal-close waves-effect waves-red btn-flat">取消</a>
+            </div>
+        </div>
         <div class="row">
             <!-- 左側：活動設定（Collection） -->
             <div class="col s12 m4">
@@ -110,6 +142,15 @@
                                     <ul id="coupons-list" class="collection" style="margin-top: 8px;"></ul>
                                 </li>
                             </ul>
+                            <!-- 現抵回饋計算結果中新增折疊顯示計算過程 -->
+                            <ul class="collapsible">
+                                <li>
+                                    <div class="collapsible-header"><i class="material-icons">info</i>查看詳細計算過程</div>
+                                    <div class="collapsible-body">
+                                        <pre id="calc-steps" style="white-space: pre-wrap;"></pre>
+                                    </div>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -154,6 +195,7 @@
     </main>
 
     <!-- Materialize JS & 初始化 -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script>
         // 在 DOM 生成後，初始化所有 Tooltips、Modals、Collapsible 等（如有用到可自行加）

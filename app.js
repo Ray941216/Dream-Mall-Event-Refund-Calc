@@ -1,5 +1,4 @@
 // app.js
-M.AutoInit();
 // ---------------------
 // 1. 活動設定管理：使用 localStorage 存、取
 // ---------------------
@@ -53,6 +52,51 @@ function updateActivity(index, newC, newR, newN) {
 // ---------------------
 // 2. 在畫面上渲染「活動清單」
 // ---------------------
+
+// Modal 初始化
+document.addEventListener("DOMContentLoaded", () => {
+    M.AutoInit();
+    // 初始化 modal
+    const modalElems = document.querySelectorAll(".modal");
+    M.Modal.init(modalElems);
+    // 初始化 collapsible
+    const collElems = document.querySelectorAll('.collapsible');
+    M.Collapsible.init(collElems);
+
+    loadActivities();
+    renderActivities();
+});
+
+function clearModalInputs() {
+    ["input-C", "input-R", "input-N"].forEach(id => {
+        const el = document.getElementById(id);
+        el.value = "";
+    });
+    M.updateTextFields();
+}
+function fillModalInputs(act) {
+    document.getElementById("input-C").value = act.C;
+    document.getElementById("input-R").value = act.R;
+    document.getElementById("input-N").value = act.N === Infinity ? "" : act.N;
+    M.updateTextFields();
+}
+
+document.getElementById("modal-save-btn").addEventListener("click", () => {
+    const C = Number(document.getElementById("input-C").value);
+    const R = Number(document.getElementById("input-R").value);
+    let N = document.getElementById("input-N").value;
+    N = N === "" || Number(N) <= 0 ? Infinity : Number(N);
+
+    if (isNaN(C) || C <= 0) { M.toast({ html: "C 必須為大於 0 的數值", classes: "red" }); return; }
+    if (isNaN(R) || R <= 0) { M.toast({ html: "R 必須為大於 0 的數值", classes: "red" }); return; }
+
+    if (editIndex !== null) updateActivity(editIndex, C, R, N);
+    else addActivity(C, R, N);
+
+    renderActivities();
+    M.Modal.getInstance(document.getElementById("modal-activity-form")).close();
+});
+
 const activityContainer = document.getElementById('activity-container');
 
 function renderActivities() {
@@ -75,75 +119,66 @@ function renderActivities() {
     });
 }
 
-// 以 prompt 方式「新增／編輯」活動
-function showActivityForm(idx) {
-    let C, R, N;
-    if (typeof idx === 'number') {
-        // 編輯模式：預填原本的值
-        const act = activityList[idx];
-        C = prompt('請輸入新門檻 C (原 ' + act.C + ')：', act.C);
-        if (C === null) return;
-        R = prompt('請輸入新回饋 R (原 ' + act.R + ')：', act.R);
-        if (R === null) return;
-        N = prompt(
-            '請輸入新每日上限 N (原 ' + ((act.N === Infinity || act.N === null || act.N === 0) ? 0 : act.N) + ')：',
-            (act.N === Infinity || act.N === null || act.N === 0) ? 0 : act.N
-        );
-        if (N === null) return;
-    } else {
-        // 新增模式：空白／預設
-        C = prompt('請輸入門檻 C：', '3000');
-        if (C === null) return;
-        R = prompt('請輸入回饋 R：', '300');
-        if (R === null) return;
-        N = prompt('請輸入每日上限 N (留空或填 0 表示無限)：', '0');
-        if (N === null) return;
-    }
 
-    C = Number(C);
-    R = Number(R);
-    N = Number(N);
+// 取代 prompt 改用 modal 表單
+let editIndex = null;
 
-    // 驗證
-    if (isNaN(C) || C <= 0) {
-        M.toast({ html: 'C 必須為大於 0 的數值', classes: 'red' });
-        return;
-    }
-    if (isNaN(R) || R <= 0) {
-        M.toast({ html: 'R 必須為大於 0 的數值', classes: 'red' });
-        return;
-    }
-    if (isNaN(N) || N <= 0) {
-        N = Infinity; // 留空或輸入 <=0，視為無限
-    }
-
-    if (typeof idx === 'number') {
-        updateActivity(idx, C, R, N);
-        M.toast({ html: '活動已更新', classes: 'green' });
-    } else {
-        addActivity(C, R, N);
-        M.toast({ html: '活動已新增', classes: 'green' });
-    }
-    renderActivities();
-}
-
-// 綁定「新增活動」按鈕
-document.getElementById('add-activity-btn').addEventListener('click', () => {
-    showActivityForm();
+document.getElementById("add-activity-btn").addEventListener("click", () => {
+    editIndex = null;
+    document.getElementById("modal-title").innerText = "新增活動";
+    clearModalInputs();
+    M.Modal.getInstance(document.getElementById("modal-activity-form")).open();
 });
 
-// 綁定清單中「編輯／刪除」按鈕
-activityContainer.addEventListener('click', (e) => {
-    const icon = e.target;
-    if (!icon.dataset.action) return;
-    const idx = Number(icon.dataset.index);
-    if (icon.dataset.action === 'delete') {
-        removeActivity(idx);
-        renderActivities();
-        M.toast({ html: '活動已刪除', classes: 'green' });
-    } else if (icon.dataset.action === 'edit') {
-        showActivityForm(idx);
+activityContainer.addEventListener("click", e => {
+    const el = e.target;
+    if (!el.dataset.action) return;
+    const idx = Number(el.dataset.index);
+    if (el.dataset.action === "edit") {
+        editIndex = idx;
+        document.getElementById("modal-title").innerText = "編輯活動";
+        fillModalInputs(activityList[idx]);
+        M.Modal.getInstance(document.getElementById("modal-activity-form")).open();
+    } else if (el.dataset.action === "delete") {
+        if (confirm("確定刪除該活動？")) {
+            removeActivity(idx);
+            renderActivities();
+            M.toast({ html: "活動已刪除", classes: "green" });
+            // 更新計算區
+            document.getElementById('calc-result').style.display = 'none';
+            document.getElementById('split-result').style.display = 'none';
+        }
     }
+});
+
+function clearModalInputs() {
+    ["input-C", "input-R", "input-N"].forEach(id => {
+        const el = document.getElementById(id);
+        el.value = "";
+    });
+    M.updateTextFields();
+}
+function fillModalInputs(act) {
+    document.getElementById("input-C").value = act.C;
+    document.getElementById("input-R").value = act.R;
+    document.getElementById("input-N").value = act.N === Infinity ? "" : act.N;
+    M.updateTextFields();
+}
+
+document.getElementById("modal-save-btn").addEventListener("click", () => {
+    const C = Number(document.getElementById("input-C").value);
+    const R = Number(document.getElementById("input-R").value);
+    let N = document.getElementById("input-N").value;
+    N = N === "" || Number(N) <= 0 ? Infinity : Number(N);
+
+    if (isNaN(C) || C <= 0) { M.toast({ html: "C 必須為大於 0 的數值", classes: "red" }); return; }
+    if (isNaN(R) || R <= 0) { M.toast({ html: "R 必須為大於 0 的數值", classes: "red" }); return; }
+
+    if (editIndex !== null) updateActivity(editIndex, C, R, N);
+    else addActivity(C, R, N);
+
+    renderActivities();
+    M.Modal.getInstance(document.getElementById("modal-activity-form")).close();
 });
 
 // ---------------------
@@ -191,7 +226,52 @@ function coreCalculate(originalAmount, acts) {
     };
 }
 
-// 綁定「現抵回饋計算」按鈕
+// 核心計算函式改成回傳計算過程文字
+function coreCalculateWithSteps(originalAmount, acts) {
+    let currentAmount = originalAmount;
+    const firstRoundCounts = new Array(acts.length).fill(0);
+    const secondRoundCounts = new Array(acts.length).fill(0);
+    let stepLog = `原始消費金額：${originalAmount} 元\n\n第一輪計算（依序計算每活動可換券張數）：\n`;
+
+    acts.forEach((act, idx) => {
+        const { C, R, N } = act;
+        const threshold = C + R;
+        const maxByAmount = Math.floor(currentAmount / threshold);
+        firstRoundCounts[idx] = maxByAmount;
+        currentAmount -= maxByAmount * R; // 扣掉已用來換券的金額
+
+        stepLog += `活動${idx + 1} (滿${C}元回饋${R}元)：\n`;
+        stepLog += `  消費金額 / 門檻(含回饋) = ${originalAmount} / ${threshold} = ${maxByAmount} 張 \n`;
+        stepLog += `  第一輪換券數: ${firstRoundCounts[idx]} 張\n`;
+        stepLog += `  扣除回饋金額: ${firstRoundCounts[idx]} x ${R} = ${firstRoundCounts[idx] * R} 元\n`;
+        stepLog += `  餘額更新為: ${currentAmount} 元\n\n`;
+    });
+
+    stepLog += "第二輪檢查（餘額能換券張數是否少於第一輪，少的券需補回金額）：\n";
+    acts.forEach((act, idx) => {
+        const { C, R } = act;
+        const actualCoupons = Math.floor(currentAmount / C);
+        const deficit = firstRoundCounts[idx] - actualCoupons;
+        if (deficit > 0) currentAmount += deficit * R;
+        secondRoundCounts[idx] = actualCoupons;
+        stepLog += `活動${idx + 1}：餘額 ${currentAmount} 元 / ${C} = ${actualCoupons} 張券\n`;
+        if (deficit > 0)
+            stepLog += `  有券數不足，補回金額: ${deficit} x ${R} = ${deficit * R} 元\n  更新餘額為 ${currentAmount} 元\n`;
+        else
+            stepLog += "  無券數不足，餘額不變\n";
+    });
+
+    let totalRebate = 0;
+    secondRoundCounts.forEach((count, idx) => totalRebate += count * acts[idx].R);
+    const finalSpend = currentAmount;
+    const discountRate = parseFloat(((finalSpend / originalAmount) * 100).toFixed(5));
+
+    stepLog += `\n計算結果：\n  最終刷卡金額: ${finalSpend} 元\n  總回饋金額: ${totalRebate} 元\n  折數: ${discountRate} %\n`;
+
+    return { finalSpend, couponsByAct: secondRoundCounts, totalRebate, discountRate, stepLog };
+}
+
+// 計算並顯示結果，包含印出計算過程
 document.getElementById('calc-btn').addEventListener('click', () => {
     const raw = document.getElementById('input-amount').value;
     const originalAmount = Number(raw);
@@ -199,25 +279,21 @@ document.getElementById('calc-btn').addEventListener('click', () => {
         M.toast({ html: '請輸入大於 0 的整數金額', classes: 'red' });
         return;
     }
-
-    // 如果活動清單為空，先提示使用者
     if (activityList.length === 0) {
         M.toast({ html: '請先新增至少一個活動', classes: 'red' });
         return;
     }
 
-    // 先把活動依 C 由小到大排序
     const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
-    const { finalSpend, couponsByAct, totalRebate, discountRate } = coreCalculate(originalAmount, sortedActs);
+    const { finalSpend, couponsByAct, totalRebate, discountRate, stepLog } = coreCalculateWithSteps(originalAmount, sortedActs);
 
-    // 將結果顯示到畫面上
     document.getElementById('final-spend').innerText = finalSpend;
     document.getElementById('total-rebate').innerText = totalRebate;
     document.getElementById('discount-rate').innerText = discountRate;
+    document.getElementById('calc-steps').innerText = stepLog;
 
     document.getElementById('input-target-spend').value = finalSpend;
     M.updateTextFields();
-
 
     const ul = document.getElementById('coupons-list');
     ul.innerHTML = '';
@@ -268,7 +344,6 @@ function splitDaysCalculate(finalAmount, acts, targetCoupons) {
     // 每天計算各活動可換券數(不扣回饋金額)
     const totalVouchers = {};
     const dayResults = days.map((amount) => {
-        let tempAmount = amount;
         const dayVouchers = dailyMax.map(({ c, r, maxCount }) => {
             const count = Math.min(Math.floor(amount / c), maxCount);
             totalVouchers[r] = (totalVouchers[r] || 0) + count;
@@ -292,7 +367,7 @@ function splitDaysCalculate(finalAmount, acts, targetCoupons) {
     };
 }
 
-
+// 綁定「計算分天」按鈕
 document.getElementById('split-calc-btn').addEventListener('click', () => {
     const rawSpend = Number(document.getElementById('input-target-spend').value);
     if (isNaN(rawSpend) || rawSpend <= 0) {
