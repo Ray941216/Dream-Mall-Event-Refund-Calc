@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>高雄夢時代回饋計算器</title>
+
+    <!-- PWA：manifest.json -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00897b">
+
+    <!-- iOS Web App 支援 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+
+    <!-- Materialize CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet" />
+
+    <style>
+        /* 自訂主題色為綠松色 (#00897b) */
+        .brand-logo {
+            font-family: "Roboto", sans-serif;
+        }
+
+        header,
+        nav {
+            background-color: #00897b !important;
+        }
+
+        /* 主內容距離固定 Navbar，下邊距稍微留空 */
+        main {
+            margin-top: 64px;
+            margin-bottom: 16px;
+        }
+
+        /* 若要讓右側卡片區 sticky */
+        .sticky-card {
+            position: sticky;
+            top: 80px;
+        }
+
+        /* 當列表過長可捲動 */
+        #activity-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar（固定在頂端） -->
+    <nav>
+        <div class="nav-wrapper">
+            <a href="#" class="brand-logo center">夢時代回饋計算器</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="row">
+            <!-- 左側：活動設定（Collection） -->
+            <div class="col s12 m4">
+                <div class="card sticky-card">
+                    <div class="card-content">
+                        <span class="card-title">活動設定</span>
+                        <ul id="activity-container" class="collection">
+                            <!-- 動態插入每筆活動 -->
+                        </ul>
+                    </div>
+                    <div class="card-action">
+                        <a id="add-activity-btn" class="btn waves-effect waves-light">新增活動</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：功能二 + 功能三 -->
+            <div class="col s12 m8">
+                <!-- 功能二：現抵回饋計算 -->
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">現抵回饋計算</span>
+
+                        <div class="row" style="margin-bottom: 0;">
+                            <div class="input-field col s8">
+                                <input id="input-amount" type="number" min="1" />
+                                <label for="input-amount">總金額 (元)</label>
+                            </div>
+                            <div class="input-field col s4" style="padding-top: 24px;">
+                                <a id="calc-btn" class="btn waves-effect waves-light">計算</a>
+                            </div>
+                        </div>
+
+                        <div id="calc-result" class="section" style="display: none; padding-top: 0;">
+                            <ul class="collection with-header">
+                                <li class="collection-header">
+                                    <h6>計算結果</h6>
+                                </li>
+                                <li class="collection-item">
+                                    最終刷卡金額：<strong id="final-spend"></strong> 元
+                                </li>
+                                <li class="collection-item">
+                                    總回饋金額：<strong id="total-rebate"></strong> 元
+                                </li>
+                                <li class="collection-item">
+                                    折數：<strong id="discount-rate"></strong> ％
+                                </li>
+                                <li class="collection-item">
+                                    <span>各活動折抵券張數：</span>
+                                    <ul id="coupons-list" class="collection" style="margin-top: 8px;"></ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 功能三：分天刷卡策略 -->
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">分天刷卡策略</span>
+
+                        <div class="row" style="margin-bottom: 0;">
+                            <div class="input-field col s8">
+                                <input id="input-target-spend" type="number" min="1" />
+                                <label for="input-target-spend">最終刷卡金額 (元)</label>
+                            </div>
+                            <div class="input-field col s4" style="padding-top: 24px;">
+                                <a id="split-calc-btn" class="btn waves-effect waves-light">計算分天</a>
+                            </div>
+                        </div>
+
+                        <div id="split-result" class="section" style="display: none; padding-top: 0;">
+                            <ul class="collection with-header">
+                                <li class="collection-header">
+                                    <h6>分天結果</h6>
+                                </li>
+                                <li class="collection-item">
+                                    至少需要天數：<strong id="split-days"></strong> 天
+                                </li>
+                                <li class="collection-item">
+                                    <span>每日刷卡金額：</span>
+                                    <ol id="days-amounts-list" style="margin-top: 8px;"></ol>
+                                </li>
+                                <li class="collection-item">
+                                    <span>各活動實際拿到券數與餘券：</span>
+                                    <ul id="leftover-list" class="collection" style="margin-top: 8px;"></ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- 右側結束 -->
+        </div> <!-- row 結束 -->
+    </main>
+
+    <!-- Materialize JS & 初始化 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+        // 在 DOM 生成後，初始化所有 Tooltips、Modals、Collapsible 等（如有用到可自行加）
+        document.addEventListener('DOMContentLoaded', function () {
+            // 例如：初始化 collection 的可折疊（若有需要）
+            // let elems = document.querySelectorAll('.collapsible');
+            // M.Collapsible.init(elems);
+        });
+    </script>
+
+    <!-- 主要邏輯程式 -->
+    <script src="app.js"></script>
+
+    <!-- 註冊 Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('SW 註冊成功：', reg))
+                .catch(err => console.error('SW 註冊失敗：', err));
+        }
+    </script>
+</body>
+
+</html>

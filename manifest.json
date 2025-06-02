@@ -1,0 +1,21 @@
+{
+    "name": "高雄夢時代回饋計算器",
+    "short_name": "夢時代回饋",
+    "description": "離線可用的百貨活動現抵回饋計算工具",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#00897b",
+    "icons": [
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
