@@ -222,9 +222,9 @@ function coreCalculateWithSteps(originalAmount, acts) {
         const { C, R } = act;
         const actualCoupons = Math.floor(currentAmount / C);
         const deficit = firstRoundCounts[idx] - actualCoupons;
-        if (deficit > 0) currentAmount += deficit * R;
         secondRoundCounts[idx] = actualCoupons;
         stepLog += `活動${idx + 1}：餘額 ${currentAmount} 元 / ${C} = ${actualCoupons} 張券\n`;
+        if (deficit > 0) currentAmount += deficit * R;
         if (deficit > 0)
             stepLog += `  有券數不足，補回金額: ${deficit} x ${R} = ${deficit * R} 元\n  更新餘額為 ${currentAmount} 元\n`;
         else
