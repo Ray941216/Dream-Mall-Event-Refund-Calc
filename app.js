@@ -381,7 +381,7 @@ function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdat
 
         const voucherSpan = document.createElement('span');
         voucherSpan.style.marginLeft = '20px';
-        voucherSpan.innerText = `回饋：${day.dayVouchers.map(v => `${v.count} 張 ${v.r} 元`).join(', ')}`;
+        voucherSpan.innerText = `回饋：${day.dayVouchers.map(v => `${v.count} 張 ${v.r} 元`).join(', ')}，回饋總金額：${day.dayVouchers.reduce((acc, v) => acc + v.count * v.r, 0)} 元`;
 
         li.appendChild(label);
         li.appendChild(input);
