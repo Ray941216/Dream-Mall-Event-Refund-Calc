@@ -1,11 +1,11 @@
 // app.js
+
 // ---------------------
-// 1. 活動設定管理：使用 localStorage 存、取
+// 1. 活動設定管理：使用 localStorage 存／取
 // ---------------------
 const STORAGE_KEY = 'activity_list';
 let activityList = [];
 
-// 從 localStorage 讀出（若無則預設空陣列）
 function loadActivities() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -15,51 +15,42 @@ function loadActivities() {
             activityList = [];
         }
     }
-
+    // 由於 localStorage 存不到 Infinity，我們要把 N=0 也視為 Infinity
     if (activityList.length > 0) {
-        for (let act = 0; act < activityList.length; act++) {
-            if (activityList[act].N === Infinity || activityList[act].N === null || activityList[act].N === 0) {
-                activityList[act].N = Infinity;
+        for (let i = 0; i < activityList.length; i++) {
+            if (activityList[i].N === Infinity || activityList[i].N === null || activityList[i].N === 0) {
+                activityList[i].N = Infinity;
             }
-
         }
     }
 }
 
-// 將 activityList 寫回 localStorage
 function saveActivities() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(activityList));
 }
 
-// 新增一筆活動
 function addActivity(C, R, N) {
     activityList.push({ C, R, N });
     saveActivities();
 }
 
-// 刪除一筆活動
+function updateActivity(index, C, R, N) {
+    activityList[index] = { C, R, N };
+    saveActivities();
+}
+
 function removeActivity(index) {
     activityList.splice(index, 1);
     saveActivities();
 }
 
-// 更新某筆活動（index）
-function updateActivity(index, newC, newR, newN) {
-    activityList[index] = { C: newC, R: newR, N: newN };
-    saveActivities();
-}
-
 // ---------------------
-// 2. 在畫面上渲染「活動清單」
+// 2. 活動設定 UI：渲染／Modal 管理
 // ---------------------
-
-// Modal 初始化
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener('DOMContentLoaded', () => {
     M.AutoInit();
-    // 初始化 modal
-    const modalElems = document.querySelectorAll(".modal");
+    const modalElems = document.querySelectorAll('.modal');
     M.Modal.init(modalElems);
-    // 初始化 collapsible
     const collElems = document.querySelectorAll('.collapsible');
     M.Collapsible.init(collElems);
 
@@ -68,11 +59,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 const activityContainer = document.getElementById('activity-container');
+let editIndex = null;
 
 function renderActivities() {
     activityContainer.innerHTML = '';
     activityList.forEach((act, idx) => {
-        // 每筆活動以 Materialize Collection 顯示
         const li = document.createElement('li');
         li.className = 'collection-item';
         li.innerHTML = `
@@ -80,8 +71,8 @@ function renderActivities() {
         滿 <strong>${act.C}</strong> 元 回饋 <strong>${act.R}</strong> 元，
         日限 ${act.N === Infinity ? '無限' : act.N} 份
         <a href="#!" class="secondary-content">
-          <i class="material-icons" data-action="edit" data-index="${idx}">edit</i>
-          <i class="material-icons" data-action="delete" data-index="${idx}">delete</i>
+          <i class="material-icons pointer" data-action="edit" data-index="${idx}">edit</i>
+          <i class="material-icons pointer" data-action="delete" data-index="${idx}">delete</i>
         </a>
       </div>
     `;
@@ -89,114 +80,78 @@ function renderActivities() {
     });
 }
 
+function clearModalInputs() {
+    ['input-C', 'input-R', 'input-N'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+    M.updateTextFields();
+}
 
-// 取代 prompt 改用 modal 表單
-let editIndex = null;
+function fillModalInputs(act) {
+    document.getElementById('input-C').value = act.C;
+    document.getElementById('input-R').value = act.R;
+    document.getElementById('input-N').value = act.N === Infinity ? '' : act.N;
+    M.updateTextFields();
+}
 
-document.getElementById("add-activity-btn").addEventListener("click", () => {
+document.getElementById('add-activity-btn').addEventListener('click', () => {
     editIndex = null;
-    document.getElementById("modal-title").innerText = "新增活動";
+    document.getElementById('modal-title').innerText = '新增活動';
     clearModalInputs();
-    M.Modal.getInstance(document.getElementById("modal-activity-form")).open();
+    M.Modal.getInstance(document.getElementById('modal-activity-form')).open();
 });
 
-activityContainer.addEventListener("click", e => {
+activityContainer.addEventListener('click', (e) => {
     const el = e.target;
     if (!el.dataset.action) return;
     const idx = Number(el.dataset.index);
-    if (el.dataset.action === "edit") {
+    if (el.dataset.action === 'edit') {
         editIndex = idx;
-        document.getElementById("modal-title").innerText = "編輯活動";
+        document.getElementById('modal-title').innerText = '編輯活動';
         fillModalInputs(activityList[idx]);
-        M.Modal.getInstance(document.getElementById("modal-activity-form")).open();
-    } else if (el.dataset.action === "delete") {
-        if (confirm("確定刪除該活動？")) {
+        M.Modal.getInstance(document.getElementById('modal-activity-form')).open();
+    } else if (el.dataset.action === 'delete') {
+        if (confirm('確定刪除該活動？')) {
             removeActivity(idx);
             renderActivities();
-            M.toast({ html: "活動已刪除", classes: "green" });
-            // 更新計算區
+            M.toast({ html: '活動已刪除', classes: 'green' });
+            // 刪除活動後，要讓前端的計算結果隱藏
             document.getElementById('calc-result').style.display = 'none';
             document.getElementById('split-result').style.display = 'none';
         }
     }
 });
 
-function clearModalInputs() {
-    ["input-C", "input-R", "input-N"].forEach(id => {
-        const el = document.getElementById(id);
-        el.value = "";
-    });
-    M.updateTextFields();
-}
-function fillModalInputs(act) {
-    document.getElementById("input-C").value = act.C;
-    document.getElementById("input-R").value = act.R;
-    document.getElementById("input-N").value = act.N === Infinity ? "" : act.N;
-    M.updateTextFields();
-}
+document.getElementById('modal-save-btn').addEventListener('click', () => {
+    const C = Number(document.getElementById('input-C').value);
+    const R = Number(document.getElementById('input-R').value);
+    let N = document.getElementById('input-N').value;
+    N = N === '' || Number(N) <= 0 ? Infinity : Number(N);
 
-document.getElementById("modal-save-btn").addEventListener("click", () => {
-    const C = Number(document.getElementById("input-C").value);
-    const R = Number(document.getElementById("input-R").value);
-    let N = document.getElementById("input-N").value;
-    N = N === "" || Number(N) <= 0 ? Infinity : Number(N);
+    if (isNaN(C) || C <= 0) {
+        M.toast({ html: 'C 必須為大於 0 的數值', classes: 'red' });
+        return;
+    }
+    if (isNaN(R) || R <= 0) {
+        M.toast({ html: 'R 必須為大於 0 的數值', classes: 'red' });
+        return;
+    }
 
-    if (isNaN(C) || C <= 0) { M.toast({ html: "C 必須為大於 0 的數值", classes: "red" }); return; }
-    if (isNaN(R) || R <= 0) { M.toast({ html: "R 必須為大於 0 的數值", classes: "red" }); return; }
-
-    if (editIndex !== null) updateActivity(editIndex, C, R, N);
-    else addActivity(C, R, N);
+    if (editIndex !== null) {
+        updateActivity(editIndex, C, R, N);
+        M.toast({ html: '活動已更新', classes: 'green' });
+    } else {
+        addActivity(C, R, N);
+        M.toast({ html: '活動已新增', classes: 'green' });
+    }
 
     renderActivities();
-    M.Modal.getInstance(document.getElementById("modal-activity-form")).close();
+    M.Modal.getInstance(document.getElementById('modal-activity-form')).close();
 });
 
 // ---------------------
-// 3. 功能二：現抵回饋計算演算法 coreCalculate()
+// 3. 功能二：現抵回饋計算 (含詳細計算過程)
 // ---------------------
-function coreCalculate(originalAmount, acts) {
-    let currentAmount = originalAmount;
-    const firstRoundCounts = new Array(acts.length).fill(0);
-    const secondRoundCounts = new Array(acts.length).fill(0);
-
-    // 第一輪：先算「滿 (C + R) 才能拿一張券」，並受每日上限 N 限制
-    acts.forEach((act, idx) => {
-        const { C, R, N } = act;
-        const threshold = C + R;
-        const maxByAmount = Math.floor(currentAmount / threshold);
-        firstRoundCounts[idx] = maxByAmount;
-        currentAmount -= maxByAmount * R; // 扣掉已用來換券的金額
-    });
-
-    // 第二輪：檢查餘額是否少於第一輪的「應換張數」，若少要補回金額
-    acts.forEach((act, idx) => {
-        const { C, R } = act;
-        const actualCoupons = Math.floor(currentAmount / C);
-        const deficit = firstRoundCounts[idx] - actualCoupons; // 少了幾張
-        if (deficit > 0) {
-            currentAmount += deficit * R; // 補回相應的金額
-        }
-        secondRoundCounts[idx] = actualCoupons;
-    });
-
-    // 計算總回饋金額
-    let totalRebate = 0;
-    secondRoundCounts.forEach((count, idx) => {
-        totalRebate += count * acts[idx].R;
-    });
-
-    const finalSpend = currentAmount;
-    const discountRate = parseFloat(((finalSpend / originalAmount) * 100).toFixed(5));
-
-    return {
-        finalSpend,
-        couponsByAct: secondRoundCounts,
-        totalRebate,
-        discountRate
-    };
-}
-
-// 核心計算函式改成回傳計算過程文字
 function coreCalculateWithSteps(originalAmount, acts) {
     let currentAmount = originalAmount;
     const firstRoundCounts = new Array(acts.length).fill(0);
@@ -241,7 +196,6 @@ function coreCalculateWithSteps(originalAmount, acts) {
     return { finalSpend, couponsByAct: secondRoundCounts, totalRebate, discountRate, stepLog };
 }
 
-// 計算並顯示結果，包含印出計算過程
 document.getElementById('calc-btn').addEventListener('click', () => {
     const raw = document.getElementById('input-amount').value;
     const originalAmount = Number(raw);
@@ -276,68 +230,271 @@ document.getElementById('calc-btn').addEventListener('click', () => {
 
     document.getElementById('calc-result').style.display = 'block';
 
+    // 自動觸發分天計算
     document.getElementById('split-calc-btn').click();
 });
 
 // ---------------------
-// 4. 功能三：分天刷卡策略 splitDaysCalculate()
+// 4. 功能三：動態分天刷卡策略
 // ---------------------
 
-function splitDaysCalculate(finalAmount, acts, targetCoupons) {
-    function gcd(a, b) {
-        return b === 0 ? a : gcd(b, a % b);
+// 計算「每日最大刷卡額」：取有限日限活動 C×N 的最大；若全部日限無限，用剩餘金額
+function calculateMaxDailySpend(dailyMax, remainAmount) {
+    const finiteCaps = dailyMax
+        .filter(act => act.n < 1e9)
+        .map(act => act.n * act.c);
+    if (finiteCaps.length === 0) {
+        return remainAmount;
     }
-    function lcm(a, b) {
-        return (a * b) / gcd(a, b);
-    }
-
-    // 先計算所有活動 C 的最小公倍數作為刷卡單位
-    let unitC = acts.reduce((acc, act) => lcm(acc, act.C), 1);
-
-    // 準備每日限制 (門檻c, 回饋r, 日上限maxCount)
-    const dailyMax = acts.map((act) => ({
-        c: act.C,
-        r: act.R,
-        maxCount: act.N === Infinity ? Infinity : act.N,
-    }));
-
-    // 切分每日刷卡金額
-    const days = [];
-    let remainingAmount = finalAmount;
-
-    while (remainingAmount > 0) {
-        const dayAmount = Math.min(remainingAmount, unitC);
-        days.push(dayAmount);
-        remainingAmount -= dayAmount;
-    }
-
-    // 每天計算各活動可換券數(不扣回饋金額)
-    const totalVouchers = {};
-    const dayResults = days.map((amount) => {
-        const dayVouchers = dailyMax.map(({ c, r, maxCount }) => {
-            const count = Math.min(Math.floor(amount / c), maxCount);
-            totalVouchers[r] = (totalVouchers[r] || 0) + count;
-            return { r, count };
-        });
-        return { amount, dayVouchers };
-    });
-
-    // 計算餘券 = 總換券數 - 目標券數
-    const excess = {};
-    acts.forEach((act, idx) => {
-        const requiredCount = targetCoupons[idx] || 0;
-        const obtainedCount = totalVouchers[act.R] || 0;
-        excess[act.R] = obtainedCount - requiredCount;
-    });
-
-    return {
-        daysCount: days.length,
-        dayResults,
-        excess,
-    };
+    return Math.max(...finiteCaps);
 }
 
-// 綁定「計算分天」按鈕
+// 計算 C 的最小公倍數
+function lcm(a, b) {
+    const gcd = (x, y) => (y === 0 ? x : gcd(y, x % y));
+    return (a * b) / gcd(a, b);
+}
+function computeLCMForCs(acts) {
+    return acts.reduce((acc, act) => lcm(acc, act.C), 1);
+}
+
+/**
+ * dynamicSplitRemaining(remainAmount, acts, remainCoupons)
+ *    - remainAmount：尚未刷的金額
+ *    - acts：依 C 由小到大排序的活動陣列
+ *    - remainCoupons：該活動剩下尚未「折抵需求」的券數（從原本需求中扣掉已換到的券數）
+ *
+ *  返回：
+ *    { futureResults, futureGot }
+ *      - futureResults：每一天分天計算的結果[{ amount, actualSpend, dayVouchers: [{r,count}, …] }, …]
+ *      - futureGot：一個 object，key 為 R，value 為這段「分天」累積換到的該種券數
+ */
+function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
+    console.log('\n===== 處理剩餘金額與券數 =====');
+    console.log('剩餘金額:', remainAmount);
+    console.log('剩餘券數需求:', remainCoupons);
+
+    // dailyMax: 將原本的 acts 轉成 { c, r, n }（n: 如果是 Infinity 就設成 1e9 代表無限拿）
+    const dailyMax = acts.map(act => ({
+        c: act.C,
+        r: act.R,
+        n: act.N === Infinity ? 1e9 : act.N
+    }));
+
+    // 各活動的門檻 C 最小公倍數
+    const lcmC = computeLCMForCs(acts);
+    console.log('LCM:', lcmC);
+
+    const futureResults = [];
+    const futureGot = {}; // 用來累計「分天換到的券數」
+
+    let dayIndex = 0;
+    while (remainAmount > 0 && remainCoupons.some(c => c > 0)) {
+        console.log(`-- 剩餘第 ${dayIndex + 1} 天計算 --`);
+        console.log('  剩餘金額:', remainAmount);
+        console.log('  剩餘券數需求:', remainCoupons);
+
+        // 計算「單日上限」：取有限日限活動 C×N 的最大，如果都無限則就是 remainAmount
+        const maxDailySpend = calculateMaxDailySpend(dailyMax, remainAmount);
+        console.log('  單日上限 (C×N 最大):', maxDailySpend);
+
+        let dayAmount;
+        if (remainAmount > maxDailySpend) {
+            // 如果剩餘金額比單日上限大，就先看 LCM
+            if (lcmC <= remainAmount) {
+                dayAmount = lcmC;
+                console.log('  用 LCM 刷:', dayAmount);
+            } else {
+                dayAmount = maxDailySpend;
+                console.log('  用單日上限刷:', dayAmount);
+            }
+        } else {
+            dayAmount = remainAmount;
+            console.log('  剩餘金額 <= 單日上限，用剩餘刷:', dayAmount);
+        }
+
+        // 這天各活動實際能換到的券數（要同時考慮「金額 / C」 與 「每日上限 N」 與 「剩餘需求 remainCoupons」）
+        const dayVouchers = dailyMax.map((act, idx) => {
+            const maxCountByAmt = Math.floor(dayAmount / act.c);
+            const count = Math.min(maxCountByAmt, act.n, remainCoupons[idx]);
+            return { r: act.r, count };
+        });
+        console.log('  換券數:', dayVouchers.map(v => v.count));
+
+        // 當天拿到的回饋總金額
+        const totalRebate = dayVouchers.reduce((acc, v) => acc + v.count * v.r, 0);
+        console.log('  當天回饋總金額:', totalRebate);
+
+        // 實際刷卡金額 (扣掉已折抵金額)
+        const actualSpend = dayAmount - totalRebate;
+        console.log('  實際刷卡:', actualSpend);
+
+        // 推到結果
+        futureResults.push({ amount: dayAmount, actualSpend, dayVouchers });
+
+        // 更新 remainCoupons（扣掉當天已換到的券數）
+        remainCoupons = remainCoupons.map((c, idx) => c - dayVouchers[idx].count);
+
+        // 累計 futureGot
+        dayVouchers.forEach(({ r, count }) => {
+            futureGot[r] = (futureGot[r] || 0) + count;
+        });
+
+        // 更新 remainAmount
+        remainAmount -= dayAmount;
+        console.log('  更新後剩餘券數需求:', remainCoupons);
+        console.log('  更新後剩餘金額:', remainAmount);
+
+        // 如果剩餘券全部 <=0，就提早結束
+        if (remainCoupons.every(c => c <= 0)) {
+            console.log('  已換滿所有券，結束剩餘計算');
+            break;
+        }
+        dayIndex++;
+    }
+
+    console.log('  未來取得券數:', futureGot);
+    console.log('===== 完成剩餘計算 =====\n');
+    return { futureResults, futureGot };
+}
+
+// 產生可編輯日刷金額的輸入框
+function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdateIndex = 0) {
+    const container = document.getElementById('days-amounts-list');
+    container.innerHTML = ''; // 清空現有
+
+    dailyResults.forEach((day, idx) => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '8px';
+
+        const label = document.createElement('label');
+        label.innerText = `第 ${idx + 1} 天刷卡金額: `;
+        label.style.marginRight = '12px';
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = 0;
+        input.value = day.amount;
+        input.dataset.dayIndex = idx;
+        input.style.width = '150px';
+        input.className = 'validate';
+
+        const voucherSpan = document.createElement('span');
+        voucherSpan.style.marginLeft = '20px';
+        voucherSpan.innerText = `回饋：${day.dayVouchers.map(v => `${v.count} 張 ${v.r} 元`).join(', ')}`;
+
+        li.appendChild(label);
+        li.appendChild(input);
+        li.appendChild(voucherSpan);
+        container.appendChild(li);
+
+        bindInputDebounce(input);
+    });
+
+    M.updateTextFields();
+}
+function bindInputDebounce(input) {
+    let debounceTimer;
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const dayIndex = Number(input.dataset.dayIndex);
+            onDailyAmountChange(dayIndex);
+        }, 300);
+    });
+}
+
+// 使用者修改某天金額後，從該天開始重新計算後續
+function onDailyAmountChange(changedDayIndex) {
+    const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
+    const couponItems = document.querySelectorAll('#coupons-list .collection-item');
+    if (couponItems.length === 0) {
+        M.toast({ html: '請先執行現抵回饋計算', classes: 'red' });
+        return;
+    }
+
+    // 讀取「現抵回饋計算」階段的目標券數
+    const targetCoupons = [];
+    couponItems.forEach(li => {
+        const match = li.innerText.match(/：(\d+) 張/);
+        targetCoupons.push(match ? Number(match[1]) : 0);
+    });
+
+    const originalFinal = Number(document.getElementById('input-target-spend').value);
+    const inputs = document.querySelectorAll('#days-amounts-list input');
+    const userInputs = Array.from(inputs).map(input => {
+        const val = Number(input.value);
+        return isNaN(val) || val < 0 ? 0 : val;
+    });
+
+    console.log(`>>> 使用者修改第 ${changedDayIndex + 1} 天刷卡金額，觸發重新計算 <<<`);
+    console.log('用戶目前輸入金額陣列：', userInputs);
+
+    // 1. 計算「保留天」之前（含 changedDayIndex）已使用金額與換到的券
+    let remainAmount = originalFinal;
+    let remainCoupons = [...targetCoupons];
+    const preservedResults = [];
+
+    for (let i = 0; i <= changedDayIndex; i++) {
+        const dayAmount = userInputs[i];
+        const dayVouchers = sortedActs.map((act, idx) => {
+            const maxCountByAmt = Math.floor(dayAmount / act.C);
+            const count = Math.min(maxCountByAmt, act.N === Infinity ? 1e9 : act.N, remainCoupons[idx]);
+            return { r: act.R, count };
+        });
+        const totalRebate = dayVouchers.reduce((acc, v) => acc + v.count * v.r, 0);
+        const actualSpend = dayAmount - totalRebate;
+
+        remainAmount -= dayAmount;
+        remainCoupons = remainCoupons.map((c, idx) => c - dayVouchers[idx].count);
+
+        preservedResults.push({ amount: dayAmount, actualSpend, dayVouchers });
+        console.log(`保留第 ${i + 1} 天: 刷 ${dayAmount}，拿券 ${dayVouchers.map(v => v.count)}，剩金 ${remainAmount}，剩券 ${remainCoupons}`);
+    }
+
+    // 2. 用剩下的「remainAmount」和「remainCoupons」做動態分天
+    const { futureResults, futureGot } = dynamicSplitRemaining(remainAmount, sortedActs, remainCoupons);
+
+    // 3. 合併保留 + 未來
+    const allResults = preservedResults.concat(futureResults);
+    const daysCount = allResults.length;
+
+    console.log('重新計算結果：需要天數', daysCount);
+    console.log('每日完整結果：', allResults);
+
+    // 4. 計算分天後，實際換到的「總券數」 
+    const totalVouchersObtained = allResults.reduce((acc, day) => {
+        day.dayVouchers.forEach(v => acc[v.r] = (acc[v.r] || 0) + v.count);
+        return acc;
+    }, {});
+
+    // 5. 計算顯示餘券：實際換到的總券數 - 需求券數 (targetCoupons[idx])
+    const remainingVouchers = {};
+    sortedActs.forEach((act, idx) => {
+        const obtained = totalVouchersObtained[act.R] || 0;
+        const required = targetCoupons[idx] || 0;
+        remainingVouchers[act.R] = obtained - required;
+    });
+
+    console.log('實際取得的各回饋券總張數:', totalVouchersObtained);
+    console.log('各券餘數:', remainingVouchers);
+
+    // 6. 更新畫面
+    document.getElementById('split-days').innerText = daysCount;
+    renderDailyAmountInputs(allResults, userInputs, changedDayIndex + 1);
+
+    const leftoverUL = document.getElementById('leftover-list');
+    leftoverUL.innerHTML = '';
+    sortedActs.forEach(act => {
+        const leftoverCount = remainingVouchers[act.R] ?? 0;
+        const li = document.createElement('li');
+        li.className = 'collection-item';
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 張`;
+        leftoverUL.appendChild(li);
+    });
+    document.getElementById('split-result').style.display = 'block';
+}
+
 document.getElementById('split-calc-btn').addEventListener('click', () => {
     const rawSpend = Number(document.getElementById('input-target-spend').value);
     if (isNaN(rawSpend) || rawSpend <= 0) {
@@ -345,60 +502,66 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
         return;
     }
 
-    // 檢查是否有現抵計算結果
     const couponItems = document.querySelectorAll('#coupons-list .collection-item');
     if (couponItems.length === 0) {
         M.toast({ html: '請先執行「現抵回饋計算」，才能取得目標券數', classes: 'red' });
         return;
     }
 
-    // 從畫面抓 targetCoupons，結構為陣列，跟 acts 順序一樣
     const targetCoupons = [];
-    couponItems.forEach((li) => {
-        const text = li.innerText; // 例："滿 3000 回饋 300：17 張"
-        const match = text.match(/：(\d+) 張/);
+    couponItems.forEach(li => {
+        const match = li.innerText.match(/：(\d+) 張/);
         targetCoupons.push(match ? Number(match[1]) : 0);
     });
 
     const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
 
-    // 使用新版分天函式
-    const { daysCount, dayResults, excess } = splitDaysCalculate(rawSpend, sortedActs, targetCoupons);
+    console.log('\n>>> 使用「計算分天」按鈕，開始分天計算 <<<');
+    console.log('最終刷卡金額 (totalAmount):', rawSpend);
+    console.log('目標券數:', targetCoupons);
 
-    // 顯示天數
-    document.getElementById('split-days').innerText = daysCount;
+    // 1. 執行分天計算
+    const { futureResults, futureGot } = dynamicSplitRemaining(rawSpend, sortedActs, targetCoupons);
 
-    // 顯示每天刷卡金額與券數明細
-    const daysList = document.getElementById('days-amounts-list');
-    daysList.innerHTML = '';
-    dayResults.forEach((day, idx) => {
-        const li = document.createElement('li');
-        // 每日券數以「xx 張 r 元」組成字串
-        const vouchersDesc = day.dayVouchers
-            .map(v => `${v.count} 張 ${v.r} 元`)
-            .join(', ');
-        li.innerText = `第 ${idx + 1} 天：刷 ${day.amount} 元，回饋：${vouchersDesc}`;
-        daysList.appendChild(li);
+    console.log('分天計算結果：需要天數', futureResults.length);
+    console.log('每日建議結果：', futureResults);
+    console.log('未來取得券數:', futureGot);
+
+    // 2. 計算分天後的實際換券總數
+    const totalVouchersObtained = {};
+    futureResults.forEach(day => {
+        day.dayVouchers.forEach(v => {
+            totalVouchersObtained[v.r] = (totalVouchersObtained[v.r] || 0) + v.count;
+        });
     });
 
-    // 顯示餘券
+    // 3. 計算餘券：分天換到的總券數 - 需求券數
+    const remainingVouchers = {};
+    sortedActs.forEach((act, idx) => {
+        const obtained = totalVouchersObtained[act.R] || 0;
+        const required = targetCoupons[idx] || 0;
+        remainingVouchers[act.R] = obtained - required;
+    });
+
+    console.log('分天總計換到券數:', totalVouchersObtained);
+    console.log('分天後餘券狀況:', remainingVouchers);
+
+    // 4. 更新畫面
+    document.getElementById('split-days').innerText = futureResults.length;
+    renderDailyAmountInputs(futureResults);
+
     const leftoverUL = document.getElementById('leftover-list');
     leftoverUL.innerHTML = '';
-    sortedActs.forEach((act) => {
+    sortedActs.forEach(act => {
+        const leftoverCount = remainingVouchers[act.R] ?? 0;
         const li = document.createElement('li');
-        const leftoverCount = excess[act.R] ?? 0;
-        li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 張`;
         li.className = 'collection-item';
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 張`;
         leftoverUL.appendChild(li);
     });
-
-    // 顯示區塊
     document.getElementById('split-result').style.display = 'block';
 });
 
-
-// ---------------------
-// 5. 初始化：載入活動並渲染
-// ---------------------
+// 初始化：載入並渲染活動
 loadActivities();
 renderActivities();
