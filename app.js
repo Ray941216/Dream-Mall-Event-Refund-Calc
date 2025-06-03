@@ -67,36 +67,6 @@ document.addEventListener("DOMContentLoaded", () => {
     renderActivities();
 });
 
-function clearModalInputs() {
-    ["input-C", "input-R", "input-N"].forEach(id => {
-        const el = document.getElementById(id);
-        el.value = "";
-    });
-    M.updateTextFields();
-}
-function fillModalInputs(act) {
-    document.getElementById("input-C").value = act.C;
-    document.getElementById("input-R").value = act.R;
-    document.getElementById("input-N").value = act.N === Infinity ? "" : act.N;
-    M.updateTextFields();
-}
-
-document.getElementById("modal-save-btn").addEventListener("click", () => {
-    const C = Number(document.getElementById("input-C").value);
-    const R = Number(document.getElementById("input-R").value);
-    let N = document.getElementById("input-N").value;
-    N = N === "" || Number(N) <= 0 ? Infinity : Number(N);
-
-    if (isNaN(C) || C <= 0) { M.toast({ html: "C 必須為大於 0 的數值", classes: "red" }); return; }
-    if (isNaN(R) || R <= 0) { M.toast({ html: "R 必須為大於 0 的數值", classes: "red" }); return; }
-
-    if (editIndex !== null) updateActivity(editIndex, C, R, N);
-    else addActivity(C, R, N);
-
-    renderActivities();
-    M.Modal.getInstance(document.getElementById("modal-activity-form")).close();
-});
-
 const activityContainer = document.getElementById('activity-container');
 
 function renderActivities() {
