@@ -151,11 +151,6 @@ document.getElementById('modal-save-btn').addEventListener('click', () => {
 // 3. 功能二：現抵回饋計算 (含詳細計算過程)
 // ---------------------
 
-$('#input-amount').on('change', () => {
-    $("#calc-result").fadeOut(200);
-    $("#split-card").fadeOut(200);
-});
-
 function coreCalculateWithSteps(originalAmount, acts) {
     let currentAmount = originalAmount;
     const firstRoundCounts = new Array(acts.length).fill(0);
