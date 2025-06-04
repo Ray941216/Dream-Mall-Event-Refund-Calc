@@ -15,12 +15,10 @@ function loadActivities() {
             activityList = [];
         }
     }
-    // 由於 localStorage 存不到 Infinity，我們要把 N=0 也視為 Infinity
-    if (activityList.length > 0) {
-        for (let i = 0; i < activityList.length; i++) {
-            if (activityList[i].N === Infinity || activityList[i].N === null || activityList[i].N === 0) {
-                activityList[i].N = Infinity;
-            }
+    // 把 0 或 null 當成 Infinity 處理
+    for (let i = 0; i < activityList.length; i++) {
+        if (activityList[i].N === 0 || activityList[i].N === null) {
+            activityList[i].N = Infinity;
         }
     }
 }
@@ -152,6 +150,12 @@ document.getElementById('modal-save-btn').addEventListener('click', () => {
 // ---------------------
 // 3. 功能二：現抵回饋計算 (含詳細計算過程)
 // ---------------------
+
+$('#input-amount').on('change', () => {
+    $("#calc-result").fadeOut(200);
+    $("#split-card").fadeOut(200);
+});
+
 function coreCalculateWithSteps(originalAmount, acts) {
     let currentAmount = originalAmount;
     const firstRoundCounts = new Array(acts.length).fill(0);
@@ -180,10 +184,12 @@ function coreCalculateWithSteps(originalAmount, acts) {
         secondRoundCounts[idx] = actualCoupons;
         stepLog += `活動${idx + 1}：餘額 ${currentAmount} 元 / ${C} = ${actualCoupons} 張券\n`;
         if (deficit > 0) currentAmount += deficit * R;
-        if (deficit > 0)
-            stepLog += `  有券數不足，補回金額: ${deficit} x ${R} = ${deficit * R} 元\n  更新餘額為 ${currentAmount} 元\n`;
-        else
+        if (deficit > 0) {
+            stepLog += `  有券數不足，補回金額: ${deficit} x ${R} = ${deficit * R} 元\n`;
+            stepLog += `  更新餘額為 ${currentAmount} 元\n`;
+        } else {
             stepLog += "  無券數不足，餘額不變\n";
+        }
     });
 
     let totalRebate = 0;
@@ -231,6 +237,8 @@ document.getElementById('calc-btn').addEventListener('click', () => {
     document.getElementById('calc-result').style.display = 'block';
 
     // 自動觸發分天計算
+    // document.getElementById('split-card').style.display = 'block';
+    $('#split-card').fadeIn();
     document.getElementById('split-calc-btn').click();
 });
 
@@ -262,19 +270,28 @@ function computeLCMForCs(acts) {
  * dynamicSplitRemaining(remainAmount, acts, remainCoupons)
  *    - remainAmount：尚未刷的金額
  *    - acts：依 C 由小到大排序的活動陣列
- *    - remainCoupons：該活動剩下尚未「折抵需求」的券數（從原本需求中扣掉已換到的券數）
+ *    - remainCoupons：各活動「還沒折抵到」的券數需求（此處僅用作最後計算餘券）
  *
  *  返回：
  *    { futureResults, futureGot }
- *      - futureResults：每一天分天計算的結果[{ amount, actualSpend, dayVouchers: [{r,count}, …] }, …]
- *      - futureGot：一個 object，key 為 R，value 為這段「分天」累積換到的該種券數
+ *      - futureResults：每一天分天計算的結果
+ *          [
+ *            {
+ *              amount: 該天刷卡金額,
+ *              actualSpend: 實際刷卡金額,
+ *              dayVouchers: [ { r, count }, … ],
+ *              totalDayRebate: 當天回饋總金額
+ *            },
+ *            …
+ *          ]
+ *      - futureGot：一個 object，key=R、value=該 R 面額券分天累計換到的張數
  */
 function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
     console.log('\n===== 處理剩餘金額與券數 =====');
     console.log('剩餘金額:', remainAmount);
-    console.log('剩餘券數需求:', remainCoupons);
+    console.log('原始剩餘券數需求 (僅供最後扣差用):', remainCoupons);
 
-    // dailyMax: 將原本的 acts 轉成 { c, r, n }（n: 如果是 Infinity 就設成 1e9 代表無限拿）
+    // dailyMax: 將原本的 acts 轉成方便使用的 { c, r, n }
     const dailyMax = acts.map(act => ({
         c: act.C,
         r: act.R,
@@ -289,18 +306,19 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
     const futureGot = {}; // 用來累計「分天換到的券數」
 
     let dayIndex = 0;
+    // 當剩餘金額 > 0 且 有需求券 (remainCoupons) > 0 才要繼續
     while (remainAmount > 0 && remainCoupons.some(c => c > 0)) {
         console.log(`-- 剩餘第 ${dayIndex + 1} 天計算 --`);
         console.log('  剩餘金額:', remainAmount);
         console.log('  剩餘券數需求:', remainCoupons);
 
-        // 計算「單日上限」：取有限日限活動 C×N 的最大，如果都無限則就是 remainAmount
+        // 計算「單日上限」：取有限日限活動 C×N 的最大，如果全部無限就用 remainAmount
         const maxDailySpend = calculateMaxDailySpend(dailyMax, remainAmount);
         console.log('  單日上限 (C×N 最大):', maxDailySpend);
 
         let dayAmount;
         if (remainAmount > maxDailySpend) {
-            // 如果剩餘金額比單日上限大，就先看 LCM
+            // 若剩餘金額 > 單日上限，先看能否用 LCM
             if (lcmC <= remainAmount) {
                 dayAmount = lcmC;
                 console.log('  用 LCM 刷:', dayAmount);
@@ -309,34 +327,38 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
                 console.log('  用單日上限刷:', dayAmount);
             }
         } else {
+            // 剩餘金額 <= 單日上限，直接刷剩餘
             dayAmount = remainAmount;
             console.log('  剩餘金額 <= 單日上限，用剩餘刷:', dayAmount);
         }
 
-        // 這天各活動實際能換到的券數（要同時考慮「金額 / C」 與 「每日上限 N」 與 「剩餘需求 remainCoupons」）
+        // 計算當天能換到的券數：只以「金額／門檻」與「日限 N」做上限
         const dayVouchers = dailyMax.map((act, idx) => {
             const maxCountByAmt = Math.floor(dayAmount / act.c);
-            const count = Math.min(maxCountByAmt, act.n, remainCoupons[idx]);
+            const count = Math.min(maxCountByAmt, act.n);
             return { r: act.r, count };
         });
         console.log('  換券數:', dayVouchers.map(v => v.count));
 
-        // 當天拿到的回饋總金額
-        const totalRebate = dayVouchers.reduce((acc, v) => acc + v.count * v.r, 0);
-        console.log('  當天回饋總金額:', totalRebate);
+        // 當天拿到的回饋總金額 = ∑(count * r)
+        const totalDayRebate = dayVouchers.reduce((acc, v) => acc + v.count * v.r, 0);
+        console.log('  當天回饋總金額:', totalDayRebate);
 
-        // 實際刷卡金額 (扣掉已折抵金額)
-        const actualSpend = dayAmount - totalRebate;
+        // 實際刷卡金額 = dayAmount - totalDayRebate
+        const actualSpend = dayAmount - totalDayRebate;
         console.log('  實際刷卡:', actualSpend);
 
-        // 推到結果
-        futureResults.push({ amount: dayAmount, actualSpend, dayVouchers });
+        futureResults.push({
+            amount: dayAmount,
+            actualSpend,
+            dayVouchers,
+            totalDayRebate
+        });
 
-        // 更新 remainCoupons（扣掉當天已換到的券數）
-        remainCoupons = remainCoupons.map((c, idx) => c - dayVouchers[idx].count);
-
-        // 累計 futureGot
-        dayVouchers.forEach(({ r, count }) => {
+        // 更新 remainCoupons & futureGot
+        dayVouchers.forEach(({ r, count }, idx) => {
+            // 這裡允許 remainCoupons[idx] 變負數，代表「超額換到」
+            remainCoupons[idx] -= count;
             futureGot[r] = (futureGot[r] || 0) + count;
         });
 
@@ -345,11 +367,12 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
         console.log('  更新後剩餘券數需求:', remainCoupons);
         console.log('  更新後剩餘金額:', remainAmount);
 
-        // 如果剩餘券全部 <=0，就提早結束
+        // 若所有 remainCoupons 都 <= 0，就可以提前結束
         if (remainCoupons.every(c => c <= 0)) {
             console.log('  已換滿所有券，結束剩餘計算');
             break;
         }
+
         dayIndex++;
     }
 
@@ -361,7 +384,7 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
 // 產生可編輯日刷金額的輸入框
 function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdateIndex = 0) {
     const container = document.getElementById('days-amounts-list');
-    container.innerHTML = ''; // 清空現有
+    container.innerHTML = ''; // 清空
 
     dailyResults.forEach((day, idx) => {
         const li = document.createElement('li');
@@ -379,9 +402,13 @@ function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdat
         input.style.width = '150px';
         input.className = 'validate';
 
+        // 回饋券文字：顯示「張數 + 面額」以及「當天總回饋金額」
+        const voucherDesc = day.dayVouchers
+            .map(v => `${v.count} 張 ${v.r} 元`)
+            .join(', ');
         const voucherSpan = document.createElement('span');
         voucherSpan.style.marginLeft = '20px';
-        voucherSpan.innerText = `回饋：${day.dayVouchers.map(v => `${v.count} 張 ${v.r} 元`).join(', ')}，回饋總金額：${day.dayVouchers.reduce((acc, v) => acc + v.count * v.r, 0)} 元`;
+        voucherSpan.innerText = `回饋：${voucherDesc}（總 ${day.totalDayRebate} 元）`;
 
         li.appendChild(label);
         li.appendChild(input);
@@ -393,6 +420,7 @@ function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdat
 
     M.updateTextFields();
 }
+
 function bindInputDebounce(input) {
     let debounceTimer;
     input.addEventListener('input', () => {
@@ -413,8 +441,8 @@ function onDailyAmountChange(changedDayIndex) {
         return;
     }
 
-    // 讀取「現抵回饋計算」階段的目標券數
-    const targetCoupons = [];
+    // 讀取「現抵回饋計算」階段的目標券數（也就是 couponsByAct）
+    let targetCoupons = [];
     couponItems.forEach(li => {
         const match = li.innerText.match(/：(\d+) 張/);
         targetCoupons.push(match ? Number(match[1]) : 0);
@@ -430,46 +458,66 @@ function onDailyAmountChange(changedDayIndex) {
     console.log(`>>> 使用者修改第 ${changedDayIndex + 1} 天刷卡金額，觸發重新計算 <<<`);
     console.log('用戶目前輸入金額陣列：', userInputs);
 
-    // 1. 計算「保留天」之前（含 changedDayIndex）已使用金額與換到的券
+    // 1. 計算「保留天數」之前（含第 changedDayIndex 天）已刷的金額與換到的券
     let remainAmount = originalFinal;
     let remainCoupons = [...targetCoupons];
     const preservedResults = [];
 
     for (let i = 0; i <= changedDayIndex; i++) {
         const dayAmount = userInputs[i];
+        // 當天換券：只以「金額／門檻」與「日限 N」作為上限
         const dayVouchers = sortedActs.map((act, idx) => {
             const maxCountByAmt = Math.floor(dayAmount / act.C);
-            const count = Math.min(maxCountByAmt, act.N === Infinity ? 1e9 : act.N, remainCoupons[idx]);
+            const count = Math.min(maxCountByAmt, act.N === Infinity ? 1e9 : act.N);
             return { r: act.R, count };
         });
         const totalRebate = dayVouchers.reduce((acc, v) => acc + v.count * v.r, 0);
         const actualSpend = dayAmount - totalRebate;
 
         remainAmount -= dayAmount;
-        remainCoupons = remainCoupons.map((c, idx) => c - dayVouchers[idx].count);
+        dayVouchers.forEach(({ count }, idx) => {
+            remainCoupons[idx] -= count;
+        });
 
-        preservedResults.push({ amount: dayAmount, actualSpend, dayVouchers });
+        preservedResults.push({
+            amount: dayAmount,
+            actualSpend,
+            dayVouchers,
+            totalDayRebate: totalRebate
+        });
         console.log(`保留第 ${i + 1} 天: 刷 ${dayAmount}，拿券 ${dayVouchers.map(v => v.count)}，剩金 ${remainAmount}，剩券 ${remainCoupons}`);
     }
 
-    // 2. 用剩下的「remainAmount」和「remainCoupons」做動態分天
+    // 2. 用剩餘的 remainAmount 和 remainCoupons 做動態分天
     const { futureResults, futureGot } = dynamicSplitRemaining(remainAmount, sortedActs, remainCoupons);
 
-    // 3. 合併保留 + 未來
+    // 3. 合併保留結果 & 未來結果
     const allResults = preservedResults.concat(futureResults);
     const daysCount = allResults.length;
 
     console.log('重新計算結果：需要天數', daysCount);
     console.log('每日完整結果：', allResults);
 
-    // 4. 計算分天後，實際換到的「總券數」 
-    const totalVouchersObtained = allResults.reduce((acc, day) => {
-        day.dayVouchers.forEach(v => acc[v.r] = (acc[v.r] || 0) + v.count);
-        return acc;
-    }, {});
+    // 4. 計算「分天後實際換到的總券數」
+    const totalVouchersObtained = {};
+    allResults.forEach(day => {
+        day.dayVouchers.forEach(v => {
+            totalVouchersObtained[v.r] = (totalVouchersObtained[v.r] || 0) + v.count;
+        });
+    });
 
-    // 5. 計算顯示餘券：實際換到的總券數 - 需求券數 (targetCoupons[idx])
+    // 5. 計算【餘券】= (分天後實際換到的總券數) – (現抵計算使用掉的目標券數)
     const remainingVouchers = {};
+
+    // 讀取現抵計算使用掉的目標券數
+    targetCoupons = [];
+    couponItems.forEach(li => {
+        const match = li.innerText.match(/：(\d+) 張/);
+        targetCoupons.push(match ? Number(match[1]) : 0);
+    });
+
+    console.log('目標券數:', targetCoupons);
+
     sortedActs.forEach((act, idx) => {
         const obtained = totalVouchersObtained[act.R] || 0;
         const required = targetCoupons[idx] || 0;
@@ -477,7 +525,7 @@ function onDailyAmountChange(changedDayIndex) {
     });
 
     console.log('實際取得的各回饋券總張數:', totalVouchersObtained);
-    console.log('各券餘數:', remainingVouchers);
+    console.log('各券餘數 (還給店家後):', remainingVouchers);
 
     // 6. 更新畫面
     document.getElementById('split-days').innerText = daysCount;
@@ -508,7 +556,8 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
         return;
     }
 
-    const targetCoupons = [];
+    // 讀取「現抵」階段的目標券數
+    let targetCoupons = [];
     couponItems.forEach(li => {
         const match = li.innerText.match(/：(\d+) 張/);
         targetCoupons.push(match ? Number(match[1]) : 0);
@@ -527,7 +576,7 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
     console.log('每日建議結果：', futureResults);
     console.log('未來取得券數:', futureGot);
 
-    // 2. 計算分天後的實際換券總數
+    // 2. 計算「分天後實際換到的總券數」
     const totalVouchersObtained = {};
     futureResults.forEach(day => {
         day.dayVouchers.forEach(v => {
@@ -535,8 +584,18 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
         });
     });
 
-    // 3. 計算餘券：分天換到的總券數 - 需求券數
+    // 3. 計算【餘券】= (分天後實際換到的總券數) – (現抵計算使用掉的目標券數)
     const remainingVouchers = {};
+
+    // 讀取現抵計算使用掉的目標券數
+    targetCoupons = [];
+    couponItems.forEach(li => {
+        const match = li.innerText.match(/：(\d+) 張/);
+        targetCoupons.push(match ? Number(match[1]) : 0);
+    });
+
+    console.log('目標券數:', targetCoupons);
+
     sortedActs.forEach((act, idx) => {
         const obtained = totalVouchersObtained[act.R] || 0;
         const required = targetCoupons[idx] || 0;
