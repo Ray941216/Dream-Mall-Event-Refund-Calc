@@ -8,7 +8,8 @@
 
     <!-- PWA：manifest.json -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#00897b">
+    <!-- 主題顏色改成深藍，符合 Icon 主視覺 -->
+    <meta name="theme-color" content="#0F2B5B">
 
     <!-- iOS Web App 支援 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,32 +21,137 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
     <style>
-        /* 自訂主題色為綠松色 (#00897b) */
+        /*----------------------------------------------------------------
+      主要色票
+      主色：#0F2B5B（深藍）
+      輔色：#FFCC00（黃金）
+    ----------------------------------------------------------------*/
+        :root {
+            --primary-color: #0F2B5B;
+            /* 深藍 */
+            --accent-color: #FFCC00;
+            /* 黃金 */
+            --text-on-primary: #FFFFFF;
+            /* 主色上文字 */
+            --text-dark: #0F2B5B;
+            /* 深藍文字 */
+        }
+
+        /* 導航列／標題列：深藍底，白字 */
+        nav {
+            background-color: var(--primary-color) !important;
+        }
+
         .brand-logo {
+            color: var(--text-on-primary) !important;
             font-family: "Roboto", sans-serif;
         }
 
-        header,
-        nav {
-            background-color: #00897b !important;
+        /* 主內容與卡片標題：深藍文字 */
+        .card .card-title {
+            color: var(--primary-color);
+            font-weight: 500;
         }
 
-        /* 主內容距離固定 Navbar，下邊距稍微留空 */
+        .card-content,
+        .collection-item,
+        .collapsible-header {
+            color: var(--text-dark);
+        }
+
+        /* 卡片上方的邊框，用點亮的黃金色條線加強視覺 */
+        .card {
+            border-top: 4px solid var(--accent-color);
+        }
+
+        /* Materialize 按鈕（btn、btn-large） => 黃金底、深藍字 */
+        .btn,
+        .btn-large {
+            background-color: var(--accent-color) !important;
+            color: var(--primary-color) !important;
+        }
+
+        .btn:hover {
+            background-color: #e6b800 !important;
+            /* 稍微深一點的黃 */
+        }
+
+        /* 底下的分天建議按鈕樣式也一併套用 */
+        #split-calc-btn,
+        #calc-btn,
+        #modal-save-btn,
+        .collection .secondary-content .material-icons.pointer {
+            color: var(--accent-color);
+        }
+
+        /* 文字連結 hover 或 icon hover 改成深藍 */
+        a:hover {
+            color: var(--primary-color) !important;
+        }
+
+        /* 「各活動還給店家後剩餘的券」的標題等，讓文字置中、留白 */
+        #split-result .collection-header h6,
+        #calc-result .collection-header h6 {
+            color: var(--primary-color);
+        }
+
+        /* Collapsible Header：深藍底 + 黃金字 */
+        .collapsible .collapsible-header {
+            background-color: var(--primary-color);
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        .collapsible .collapsible-body {
+            background-color: #fafafa;
+        }
+
+        /* 輸入框底線、Label 在深藍或黃金之間切換 */
+        .input-field input[type="number"]:focus+label {
+            color: var(--primary-color) !important;
+        }
+
+        .input-field input[type="number"]:focus {
+            border-bottom: 1px solid var(--primary-color) !important;
+            box-shadow: 0 1px 0 0 var(--primary-color) !important;
+        }
+
+        /* 主內容區上下間距 */
         main {
             margin-top: 64px;
             margin-bottom: 16px;
         }
 
-        /* 若要讓右側卡片區 sticky */
-        .sticky-card {
-            position: sticky;
-            top: 80px;
-        }
-
-        /* 當列表過長可捲動 */
+        /* 左側活動設定清單可捲動 */
         #activity-container {
             max-height: 400px;
             overflow-y: auto;
+        }
+
+        /* 讓分天策略卡片一開始隱藏、靠右排版 */
+        #split-card {
+            margin-top: 16px;
+        }
+
+        /* 各 CollectionItem 左側加一條黃金細邊，增強視覺 */
+        .collection .collection-item {
+            border-left: 4px solid var(--accent-color);
+        }
+
+        /* 按鈕旁的 icon 顏色調整 */
+        .material-icons {
+            vertical-align: middle;
+        }
+
+        /* 如需在行動版上顯示更大字級，可在此擴充 */
+        @media (max-width: 600px) {
+            .brand-logo {
+                font-size: 1.2rem;
+            }
+
+            .card-title {
+                font-size: 1.1rem;
+            }
         }
     </style>
 </head>
@@ -91,6 +197,7 @@
                 <a href="#!" class="modal-close waves-effect waves-red btn-flat">取消</a>
             </div>
         </div>
+
         <div class="row">
             <!-- 左側：活動設定（Collection） -->
             <div class="col s12 m4">
@@ -143,10 +250,12 @@
                                     <ul id="coupons-list" class="collection" style="margin-top: 8px;"></ul>
                                 </li>
                             </ul>
+
                             <!-- 現抵回饋計算結果中新增折疊顯示計算過程 -->
                             <ul class="collapsible">
                                 <li>
-                                    <div class="collapsible-header"><i class="material-icons">info_outline</i>查看詳細計算過程
+                                    <div class="collapsible-header">
+                                        <i class="material-icons">info_outline</i>查看詳細計算過程
                                     </div>
                                     <div class="collapsible-body">
                                         <pre id="calc-steps" style="white-space: pre-wrap;"></pre>
@@ -157,7 +266,7 @@
                     </div>
                 </div>
 
-                <!-- 功能三：分天刷卡策略 -->
+                <!-- 功能三：分天刷卡策略（預設隱藏，當現抵完成後才顯示） -->
                 <div id="split-card" class="card" style="display: none;">
                     <div class="card-content">
                         <span class="card-title">分天刷卡策略</span>
@@ -200,11 +309,10 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script>
-        // 在 DOM 生成後，初始化所有 Tooltips、Modals、Collapsible 等（如有用到可自行加）
+        // 在 DOM 生成後，初始化所有 Modal、Collapsible 等
         document.addEventListener('DOMContentLoaded', function () {
-            // 例如：初始化 collection 的可折疊（若有需要）
-            // let elems = document.querySelectorAll('.collapsible');
-            // M.Collapsible.init(elems);
+            const collElems = document.querySelectorAll('.collapsible');
+            M.Collapsible.init(collElems);
         });
     </script>
 

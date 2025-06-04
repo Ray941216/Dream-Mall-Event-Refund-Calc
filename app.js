@@ -242,6 +242,17 @@ document.getElementById('calc-btn').addEventListener('click', () => {
     document.getElementById('split-calc-btn').click();
 });
 
+// 監聽 #input-amount 按下 Enter 鍵時，自動觸發計算按鈕
+const inputAmountEl = document.getElementById('input-amount');
+inputAmountEl.addEventListener('keydown', (e) => {
+    // 如果按下的按鍵是 Enter (keyCode 13 或 e.key === 'Enter')
+    if (e.key === 'Enter' || e.keyCode === 13) {
+        e.preventDefault(); // 防止表單自動提交或換行
+        document.getElementById('calc-btn').click();
+    }
+});
+
+
 // ---------------------
 // 4. 功能三：動態分天刷卡策略
 // ---------------------
