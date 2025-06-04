@@ -304,9 +304,18 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
         n: act.N === Infinity ? 1e9 : act.N
     }));
 
-    // 各活動的門檻 C 最小公倍數
-    const lcmC = computeLCMForCs(acts);
-    console.log('LCM:', lcmC);
+
+    // 算出各個有限制數量的活動滿額彼此的 lcms, [lcm(act0, act1), lcm(act0, act2), ..., lcm(act1, act2), ..., lcm(act2, act3), ..., lcm(act0, act1, act2, ..., act3)])]
+    const limitedActs = acts.filter(act => act.N < 1e9)
+    const lcms = limitedActs.filter(act => act.N < 1e9).reduce((acc, act, i) => {
+        return acc.concat(limitedActs.slice(i + 1).map(otherAct => lcm(act.C, otherAct.C)));
+    }, []);
+    console.log('各活動滿額彼此的 lcms:', lcms);
+
+    // 算出有限制數量的最大金額 max_caps = [act0.C * act0.N, act1.C * act1.N, ..., act2.C * act2.N, ..., act3.C * act3.N]
+    const maxCaps = limitedActs.map(act => act.C * act.N);
+    console.log('有限制數量的最大金額:', maxCaps);
+
 
     const futureResults = [];
     const futureGot = {}; // 用來累計「分天換到的券數」
@@ -318,26 +327,78 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
         console.log('  剩餘金額:', remainAmount);
         console.log('  剩餘券數需求:', remainCoupons);
 
-        // 計算「單日上限」：取有限日限活動 C×N 的最大，如果全部無限就用 remainAmount
-        const maxDailySpend = calculateMaxDailySpend(dailyMax, remainAmount);
-        console.log('  單日上限 (C×N 最大):', maxDailySpend);
+        // // 計算「單日上限」：取有限日限活動 C×N 的最大，如果全部無限就用 remainAmount
+        // const maxDailySpend = calculateMaxDailySpend(dailyMax, remainAmount);
+        // console.log('  單日上限 (C×N 最大):', maxDailySpend);
 
-        let dayAmount;
-        if (remainAmount > maxDailySpend) {
-            // 若剩餘金額 > 單日上限，先看能否用 LCM
-            if (lcmC <= remainAmount) {
-                dayAmount = lcmC;
-                console.log('  用 LCM 刷:', dayAmount);
-            } else {
-                dayAmount = maxDailySpend;
-                console.log('  用單日上限刷:', dayAmount);
+        // let dayAmount;
+        // if (remainAmount > maxDailySpend) {
+        //     // 若剩餘金額 > 單日上限，先看能否用 LCM
+        //     if (lcmC <= remainAmount) {
+        //         dayAmount = lcmC;
+        //         console.log('  用 LCM 刷:', dayAmount);
+        //     } else {
+        //         dayAmount = maxDailySpend;
+        //         console.log('  用單日上限刷:', dayAmount);
+        //     }
+        // } else {
+        //     // 剩餘金額 <= 單日上限，直接刷剩餘
+        //     dayAmount = remainAmount;
+        //     console.log('  剩餘金額 <= 單日上限，用剩餘刷:', dayAmount);
+        // }
+
+        // 去除重複(lcms+maxCaps)並排序，由小而大，並且移除大於 remainAmount 的值，並加入 remainAmount
+        let uniqueCaps = [...new Set(lcms.concat(maxCaps))].sort((a, b) => a - b).filter(cap => cap <= remainAmount).concat(remainAmount);
+        console.log('去除重複(lcms+maxCaps)並排序，由小而大:', uniqueCaps);
+        // 在 uniqueCaps 中補入從min(uniqueCaps)到max(uniqueCaps) 以 1000 為 step 的數值，並去除重複
+        uniqueCaps = uniqueCaps.concat(
+            Array.from({ length: Math.floor((uniqueCaps[uniqueCaps.length - 1] - uniqueCaps[0]) / 1000) + 1 }, (_, i) => uniqueCaps[0] + i * 1000)
+        ).filter((value, index, array) => array.indexOf(value) === index);
+        console.log('在 uniqueCaps 中從uniqueCaps[0]到uniqueCaps[-1]補入 以 1000 為 step 的數值:', uniqueCaps);
+
+
+        // 計算每個 uniqueCaps 中每個金額的回饋數量(gotCoupons)和損失數量(lossCouopns) ， expected={cap: {got:x, loss:y, total: x-y}}
+        let expectedCoupons = {};
+        console.log(acts);
+
+        for (let i_uc = 0; i_uc < uniqueCaps.length; i_uc++) {
+            gotRefund = 0;
+            lossRefund = 0;
+            for (let i_act = 0; i_act < acts.length; i_act++) {
+                if (uniqueCaps[i_uc] < acts[i_act].C || remainCoupons[i_act] <= 0) {
+                    continue;
+                }
+
+                expGot = Math.floor(uniqueCaps[i_uc] / acts[i_act].C)
+                expLoss = (uniqueCaps[i_uc] % acts[i_act].C) / acts[i_act].C
+                if (expGot > acts[i_act].N) {
+                    expLoss += expGot - acts[i_act].N
+                    expGot = acts[i_act].N
+                }
+                if (acts[i_act].N < 1e9) {
+                    expLoss *= Math.max(remainCoupons[i_act] - expGot, 0)
+                }
+                // expGot += Math.floor((remainAmount - uniqueCaps[i_uc]) / acts[i_act].C) * (remainCoupons[i_act] - expGot)
+
+
+
+                gotRefund += expGot
+                lossRefund += expLoss
             }
-        } else {
-            // 剩餘金額 <= 單日上限，直接刷剩餘
-            dayAmount = remainAmount;
-            console.log('  剩餘金額 <= 單日上限，用剩餘刷:', dayAmount);
-        }
 
+            expectedCoupons[uniqueCaps[i_uc]] = {
+                got: gotRefund, loss: lossRefund, lossRate: lossRefund / gotRefund
+            }
+        }
+        console.log('每個 uniqueCaps 中每個金額的回饋數量(gotCoupons)和損失數量(lossCouopns) ', expectedCoupons);
+
+        // 以 lossRate 由小到大排序
+        const sortedExpectedCoupons = Object.keys(expectedCoupons).sort((a, b) => expectedCoupons[a].lossRate - expectedCoupons[b].lossRate);
+        console.log('以 lossRate 由小到大排序:', sortedExpectedCoupons);
+
+        // 選用 lossRate 最小的金額來刷
+        let dayAmount = sortedExpectedCoupons[0];
+        console.log('  選用 lossRate 最小的金額來刷:', dayAmount);
         // 計算當天能換到的券數：只以「金額／門檻」與「日限 N」做上限
         const dayVouchers = dailyMax.map((act, idx) => {
             const maxCountByAmt = Math.floor(dayAmount / act.c);
@@ -372,12 +433,6 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
         remainAmount -= dayAmount;
         console.log('  更新後剩餘券數需求:', remainCoupons);
         console.log('  更新後剩餘金額:', remainAmount);
-
-        // 若所有 remainCoupons 都 <= 0，就可以提前結束
-        if (remainCoupons.every(c => c <= 0)) {
-            console.log('  已換滿所有券，結束剩餘計算');
-            break;
-        }
 
         dayIndex++;
     }
