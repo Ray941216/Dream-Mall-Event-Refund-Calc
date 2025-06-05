@@ -429,7 +429,7 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
             actualSpend,
             dayVouchers,
             totalDayRebate,
-            top10suggest: sortedExpectedCoupons.slice(0, 6)
+            top10suggest: sortedExpectedCoupons.slice(0, 10)
         });
 
         // 更新 remainCoupons & futureGot
@@ -456,8 +456,8 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
 function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdateIndex = 0) {
     const container = document.getElementById('days-amounts-list');
 
-    $("#days-amounts-list").data('dailyResults', dailyResults);
     container.innerHTML = ''; // 清空
+
 
     dailyResults.forEach((day, idx) => {
         const li = document.createElement('li');
@@ -495,7 +495,7 @@ function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdat
         container.appendChild(li);
 
         bindInputDebounce(input);
-
+        $("#days-amounts-list").data('dailyResults', dailyResults);
 
     });
 
