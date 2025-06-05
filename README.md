@@ -100,6 +100,7 @@ Dream-Mall-Event-Refund-Calc/
 
 ### 參考與鳴謝 (Acknowledgements)
 
+* ChatGPT o4-mini-high, o3, 4o
 * 高雄夢時代行銷活動規範
 * MDN Web Docs – PWA Guides
 * GitHub Pages 靜態部署教學
