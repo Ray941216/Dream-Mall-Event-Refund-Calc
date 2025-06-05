@@ -428,7 +428,8 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
             amount: dayAmount,
             actualSpend,
             dayVouchers,
-            totalDayRebate
+            totalDayRebate,
+            top10suggest: sortedExpectedCoupons.slice(1, 6)
         });
 
         // 更新 remainCoupons & futureGot
@@ -478,11 +479,16 @@ function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdat
             .join(', ');
         const voucherSpan = document.createElement('span');
         voucherSpan.style.marginLeft = '20px';
-        voucherSpan.innerText = `回饋：${voucherDesc}（總 ${day.totalDayRebate} 元）`;
+        voucherSpan.innerText = `回饋：${voucherDesc}（總共 ${day.totalDayRebate} 元）`;
+
+        const suggestSpan = document.createElement('span');
+        voucherSpan.style.marginLeft = '20px';
+        suggestSpan.innerText = `；其他優選: ${day.top10suggest.join(', ')}`;
 
         li.appendChild(label);
         li.appendChild(input);
         li.appendChild(voucherSpan);
+        li.appendChild(suggestSpan);
         container.appendChild(li);
 
         bindInputDebounce(input);
