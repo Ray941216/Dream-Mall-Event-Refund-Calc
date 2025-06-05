@@ -320,14 +320,33 @@
     <!-- 主要邏輯程式 -->
     <script src="app.js"></script>
 
-    <!-- 註冊 Service Worker -->
+    <!-- 註冊 Service Worker，並在有新版時顯示通知 -->
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('SW 註冊成功：', reg))
+                .then(reg => {
+                    console.log('SW 註冊成功：', reg);
+                    // 若目前已有舊版 SW 在控制中，檢查是否有新的 SW 等待安裝
+                    if (reg.waiting) {
+                        M.toast({ html: '有新版本可用，請重新整理頁面以更新', classes: 'green' });
+                    }
+
+                    // 監聽 updatefound：表示找到新版本的 SW
+                    reg.addEventListener('updatefound', () => {
+                        const newSW = reg.installing;
+                        newSW.addEventListener('statechange', () => {
+                            // 當新的 SW 安裝完成，且已有舊版正在控制時，顯示通知
+                            if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                                M.toast({ html: '有新版本可用，請重新整理頁面以更新', classes: 'green' });
+                            }
+                        });
+                    });
+                })
                 .catch(err => console.error('SW 註冊失敗：', err));
         }
     </script>
+
+
 </body>
 
 </html>
