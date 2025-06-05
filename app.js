@@ -429,7 +429,7 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
             actualSpend,
             dayVouchers,
             totalDayRebate,
-            top10suggest: sortedExpectedCoupons.slice(1, 6)
+            top10suggest: sortedExpectedCoupons.slice(0, 6)
         });
 
         // 更新 remainCoupons & futureGot
@@ -455,6 +455,8 @@ function dynamicSplitRemaining(remainAmount, acts, remainCoupons) {
 // 產生可編輯日刷金額的輸入框
 function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdateIndex = 0) {
     const container = document.getElementById('days-amounts-list');
+
+    $("#days-amounts-list").data('dailyResults', dailyResults);
     container.innerHTML = ''; // 清空
 
     dailyResults.forEach((day, idx) => {
@@ -483,7 +485,8 @@ function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdat
 
         const suggestSpan = document.createElement('span');
         voucherSpan.style.marginLeft = '20px';
-        suggestSpan.innerText = `；其他優選: ${day.top10suggest.join(', ')}`;
+        suggestSpan.innerText = `；建議金額(依推薦程度大到小): ${day.top10suggest.join(', ')}`;
+
 
         li.appendChild(label);
         li.appendChild(input);
@@ -492,6 +495,8 @@ function renderDailyAmountInputs(dailyResults, preserveInputs = null, startUpdat
         container.appendChild(li);
 
         bindInputDebounce(input);
+
+
     });
 
     M.updateTextFields();
@@ -538,6 +543,7 @@ function onDailyAmountChange(changedDayIndex) {
     let remainAmount = originalFinal;
     let remainCoupons = [...targetCoupons];
     const preservedResults = [];
+    const storedDailyResults = $("#days-amounts-list").data('dailyResults');
 
     for (let i = 0; i <= changedDayIndex; i++) {
         const dayAmount = userInputs[i];
@@ -559,7 +565,8 @@ function onDailyAmountChange(changedDayIndex) {
             amount: dayAmount,
             actualSpend,
             dayVouchers,
-            totalDayRebate: totalRebate
+            totalDayRebate: totalRebate,
+            top10suggest: storedDailyResults[i].top10suggest
         });
         console.log(`保留第 ${i + 1} 天: 刷 ${dayAmount}，拿券 ${dayVouchers.map(v => v.count)}，剩金 ${remainAmount}，剩券 ${remainCoupons}`);
     }
