@@ -504,7 +504,7 @@ function bindInputDebounce(input) {
         debounceTimer = setTimeout(() => {
             const dayIndex = Number(input.dataset.dayIndex);
             onDailyAmountChange(dayIndex);
-        }, 300);
+        }, 500);
     });
 }
 
