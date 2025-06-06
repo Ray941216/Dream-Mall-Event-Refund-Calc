@@ -524,9 +524,11 @@ function onDailyAmountChange(changedDayIndex) {
 
     // 讀取「現抵回饋計算」階段的目標券數（也就是 couponsByAct）
     let targetCoupons = [];
-    couponItems.forEach(li => {
+    let targetCouponsByAct = {};
+    couponItems.forEach((li, idx) => {
         const match = li.innerText.match(/：(\d+) 張/);
         targetCoupons.push(match ? Number(match[1]) : 0);
+        targetCouponsByAct[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
     });
 
     const originalFinal = Number(document.getElementById('input-target-spend').value);
@@ -584,27 +586,20 @@ function onDailyAmountChange(changedDayIndex) {
     // 4. 計算「分天後實際換到的總券數」
     const totalVouchersObtained = {};
     allResults.forEach(day => {
-        day.dayVouchers.forEach(v => {
-            totalVouchersObtained[v.r] = (totalVouchersObtained[v.r] || 0) + v.count;
+        day.dayVouchers.forEach((v, idx) => {
+            totalVouchersObtained[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = (totalVouchersObtained[`${sortedActs[idx].C}-${sortedActs[idx].R}`] || 0) + v.count;
         });
     });
 
     // 5. 計算【餘券】= (分天後實際換到的總券數) – (現抵計算使用掉的目標券數)
     const remainingVouchers = {};
 
-    // 讀取現抵計算使用掉的目標券數
-    targetCoupons = [];
-    couponItems.forEach(li => {
-        const match = li.innerText.match(/：(\d+) 張/);
-        targetCoupons.push(match ? Number(match[1]) : 0);
-    });
-
     console.log('目標券數:', targetCoupons);
 
     sortedActs.forEach((act, idx) => {
-        const obtained = totalVouchersObtained[act.R] || 0;
-        const required = targetCoupons[idx] || 0;
-        remainingVouchers[act.R] = obtained - required;
+        const obtained = totalVouchersObtained[`${act.C}-${act.R}`] || 0;
+        const required = targetCouponsByAct[`${act.C}-${act.R}`] || 0;
+        remainingVouchers[`${act.C}-${act.R}`] = obtained - required;
     });
 
     console.log('實際取得的各回饋券總張數:', totalVouchersObtained);
@@ -617,7 +612,7 @@ function onDailyAmountChange(changedDayIndex) {
     const leftoverUL = document.getElementById('leftover-list');
     leftoverUL.innerHTML = '';
     sortedActs.forEach(act => {
-        const leftoverCount = remainingVouchers[act.R] ?? 0;
+        const leftoverCount = remainingVouchers[`${act.C}-${act.R}`] ?? 0;
         const li = document.createElement('li');
         li.className = 'collection-item';
         li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 張`;
@@ -639,14 +634,20 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
         return;
     }
 
+    const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
+
     // 讀取「現抵」階段的目標券數
     let targetCoupons = [];
-    couponItems.forEach(li => {
+    let targetCouponsByAct = {};
+    couponItems.forEach((li, idx) => {
         const match = li.innerText.match(/：(\d+) 張/);
         targetCoupons.push(match ? Number(match[1]) : 0);
+        targetCouponsByAct[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
     });
 
-    const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
+    console.log('原始刷卡金額 (rawSpend):', rawSpend);
+    console.log('目標券數 (targetCoupons):', targetCoupons);
+    console.log('各券目標券數 (targetCouponsByAct):', targetCouponsByAct);
 
     console.log('\n>>> 使用「計算分天」按鈕，開始分天計算 <<<');
     console.log('最終刷卡金額 (totalAmount):', rawSpend);
@@ -662,27 +663,20 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
     // 2. 計算「分天後實際換到的總券數」
     const totalVouchersObtained = {};
     futureResults.forEach(day => {
-        day.dayVouchers.forEach(v => {
-            totalVouchersObtained[v.r] = (totalVouchersObtained[v.r] || 0) + v.count;
+        day.dayVouchers.forEach((v, idx) => {
+            totalVouchersObtained[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = (totalVouchersObtained[`${sortedActs[idx].C}-${sortedActs[idx].R}`] || 0) + v.count;
         });
     });
 
     // 3. 計算【餘券】= (分天後實際換到的總券數) – (現抵計算使用掉的目標券數)
     const remainingVouchers = {};
 
-    // 讀取現抵計算使用掉的目標券數
-    targetCoupons = [];
-    couponItems.forEach(li => {
-        const match = li.innerText.match(/：(\d+) 張/);
-        targetCoupons.push(match ? Number(match[1]) : 0);
-    });
-
     console.log('目標券數:', targetCoupons);
 
     sortedActs.forEach((act, idx) => {
-        const obtained = totalVouchersObtained[act.R] || 0;
-        const required = targetCoupons[idx] || 0;
-        remainingVouchers[act.R] = obtained - required;
+        const obtained = totalVouchersObtained[`${act.C}-${act.R}`] || 0;
+        const required = targetCouponsByAct[`${act.C}-${act.R}`] || 0;
+        remainingVouchers[`${act.C}-${act.R}`] = obtained - required;
     });
 
     console.log('分天總計換到券數:', totalVouchersObtained);
@@ -695,7 +689,7 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
     const leftoverUL = document.getElementById('leftover-list');
     leftoverUL.innerHTML = '';
     sortedActs.forEach(act => {
-        const leftoverCount = remainingVouchers[act.R] ?? 0;
+        const leftoverCount = remainingVouchers[`${act.C}-${act.R}`] ?? 0;
         const li = document.createElement('li');
         li.className = 'collection-item';
         li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 張`;
