@@ -508,10 +508,11 @@ function bindInputDebounce(input) {
     let debounceTimer;
     input.addEventListener('input', () => {
         clearTimeout(debounceTimer);
+        $('#split-alert').html('<div class="progress"><div class="indeterminate"></div></div>');
         debounceTimer = setTimeout(() => {
             const dayIndex = Number(input.dataset.dayIndex);
             onDailyAmountChange(dayIndex);
-        }, 500);
+        }, 3000);
     });
 }
 
