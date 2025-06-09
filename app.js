@@ -618,8 +618,8 @@ function onDailyAmountChange(changedDayIndex) {
     document.getElementById('split-days').innerText = daysCount;
     renderDailyAmountInputs(allResults, userInputs, changedDayIndex + 1);
     if (notEnough) {
-        M.toast({ html: '目前的組合，換到的券會不足！需要補錢！', classes: 'red' });
-        $('#split-alert').html('⚠️目前的組合，換到的券會不足！需要補錢！⚠️');
+        M.toast({ html: '目前的組合，換到的券會不足！需要補錢或調整組合！', classes: 'red' });
+        $('#split-alert').html('⚠️目前的組合，換到的券會不足！需要補錢或調整組合！⚠️');
     }
     else {
         $('#split-alert').html('');
@@ -704,8 +704,8 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
     document.getElementById('split-days').innerText = futureResults.length;
     renderDailyAmountInputs(futureResults);
     if (notEnough) {
-        M.toast({ html: '目前的組合，換到的券會不足！需要補錢！', classes: 'red' });
-        $('#split-alert').html('⚠️目前的組合，換到的券會不足！需要補錢！⚠️');
+        M.toast({ html: '目前的組合，換到的券會不足！需要補錢或調整組合！', classes: 'red' });
+        $('#split-alert').html('⚠️目前的組合，換到的券會不足！需要補錢或調整組合！⚠️');
     }
     else {
         $('#split-alert').html('');
