@@ -212,6 +212,8 @@ document.getElementById('calc-btn').addEventListener('click', () => {
         return;
     }
 
+    $('#input-amount-no-discount').val(originalAmount);
+
     const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
     const { finalSpend, couponsByAct, totalRebate, discountRate, stepLog } = coreCalculateWithSteps(originalAmount, sortedActs);
 
@@ -238,6 +240,8 @@ document.getElementById('calc-btn').addEventListener('click', () => {
     // document.getElementById('split-card').style.display = 'block';
     $('#split-card').fadeIn();
     document.getElementById('split-calc-btn').click();
+
+    document.getElementById('calc-btn-no-discount').click();
 });
 
 // 監聽 #input-amount 按下 Enter 鍵時，自動觸發計算按鈕
@@ -614,8 +618,8 @@ function onDailyAmountChange(changedDayIndex) {
     document.getElementById('split-days').innerText = daysCount;
     renderDailyAmountInputs(allResults, userInputs, changedDayIndex + 1);
     if (notEnough) {
-        M.toast({ html: '目前的組合，換到的券會不足！', classes: 'red' });
-        $('#split-alert').html('⚠️目前的組合，換到的券會不足！⚠️');
+        M.toast({ html: '目前的組合，換到的券會不足！需要補錢！', classes: 'red' });
+        $('#split-alert').html('⚠️目前的組合，換到的券會不足！需要補錢！⚠️');
     }
     else {
         $('#split-alert').html('');
@@ -700,8 +704,8 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
     document.getElementById('split-days').innerText = futureResults.length;
     renderDailyAmountInputs(futureResults);
     if (notEnough) {
-        M.toast({ html: '目前的組合，換到的券會不足！', classes: 'red' });
-        $('#split-alert').html('⚠️目前的組合，換到的券會不足！⚠️');
+        M.toast({ html: '目前的組合，換到的券會不足！需要補錢！', classes: 'red' });
+        $('#split-alert').html('⚠️目前的組合，換到的券會不足！需要補錢！⚠️');
     }
     else {
         $('#split-alert').html('');
@@ -718,6 +722,427 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
     });
     document.getElementById('split-result').style.display = 'block';
 });
+
+
+// ---------------------
+// 3. 功能四：不現抵回饋計算 (含詳細計算過程)
+// ---------------------
+
+function coreCalculateWithoutDisscountWithSteps(originalAmount, acts) {
+    let currentAmount = originalAmount;
+    const firstRoundCounts = new Array(acts.length).fill(0);
+    let stepLog = `消費金額：${originalAmount} 元\n\n依序計算每活動可換券張數：\n`;
+
+    acts.forEach((act, idx) => {
+        const { C, R, N } = act;
+        const threshold = C;
+        const maxByAmount = Math.floor(currentAmount / threshold);
+        firstRoundCounts[idx] = maxByAmount;
+
+        stepLog += `活動${idx + 1} (滿${C}元回饋${R}元)：\n`;
+        stepLog += `  消費金額 / 門檻(含回饋) = ${currentAmount} / ${threshold} = ${maxByAmount} 張 \n`;
+        stepLog += `  換券數: ${firstRoundCounts[idx]} 張\n`;
+        stepLog += `  回饋金額: ${firstRoundCounts[idx]} x ${R} = ${firstRoundCounts[idx] * R} 元\n`;
+    });
+
+    let totalRebate = 0;
+    firstRoundCounts.forEach((count, idx) => totalRebate += count * acts[idx].R);
+    const finalSpend = currentAmount;
+    const discountRate = parseFloat(((1 - totalRebate / originalAmount) * 100).toFixed(5));
+
+    stepLog += `\n計算結果：\n 總回饋金額: ${totalRebate} 元\n  折數: ${discountRate} %\n`;
+
+    return { finalSpend, couponsByAct: firstRoundCounts, totalRebate, discountRate, stepLog };
+}
+
+document.getElementById('calc-btn-no-discount').addEventListener('click', () => {
+    const raw = document.getElementById('input-amount-no-discount').value;
+    const originalAmount = Number(raw);
+    if (isNaN(originalAmount) || originalAmount <= 0) {
+        M.toast({ html: '請輸入大於 0 的整數金額', classes: 'red' });
+        return;
+    }
+    if (activityList.length === 0) {
+        M.toast({ html: '請先新增至少一個活動', classes: 'red' });
+        return;
+    }
+
+    const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
+    const { finalSpend, couponsByAct, totalRebate, discountRate, stepLog } = coreCalculateWithoutDisscountWithSteps(originalAmount, sortedActs);
+
+    document.getElementById('total-rebate-no-discount').innerText = totalRebate;
+    document.getElementById('discount-rate-no-discount').innerText = discountRate;
+    document.getElementById('calc-steps-no-discount').innerText = stepLog;
+
+    M.updateTextFields();
+
+    const ul = document.getElementById('coupons-list-no-discount');
+    ul.innerHTML = '';
+    sortedActs.forEach((act, idx) => {
+        const li = document.createElement('li');
+        li.className = 'collection-item';
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：${couponsByAct[idx]} 張`;
+        ul.appendChild(li);
+    });
+
+    document.getElementById('calc-result-no-discount').style.display = 'block';
+
+
+    const couponItems = document.querySelectorAll('#coupons-list-no-discount .collection-item');
+    // 讀取目標券數
+    let targetCoupons = [];
+    let targetCouponsByAct = {};
+    couponItems.forEach((li, idx) => {
+        const match = li.innerText.match(/：(\d+) 張/);
+        targetCoupons.push(match ? Number(match[1]) : 0);
+        targetCouponsByAct[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
+    });
+
+    const couponItemsDisscount = document.querySelectorAll('#coupons-list .collection-item');
+    if (couponItemsDisscount.length !== 0 && originalAmount === Number(document.getElementById('input-amount').value)) {
+        // 讀取「現抵」階段的目標券數
+        let targetCouponsDisscount = [];
+        let targetCouponsByActDisscount = {};
+        couponItemsDisscount.forEach((li, idx) => {
+            const match = li.innerText.match(/：(\d+) 張/);
+            targetCouponsDisscount.push(match ? Number(match[1]) : 0);
+            targetCouponsByActDisscount[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
+        });
+
+        const ul = document.getElementById('compare-list-no-discount');
+        let profit = 0;
+        ul.innerHTML = '';
+        sortedActs.forEach((act, idx) => {
+            const li = document.createElement('li');
+            li.className = 'collection-item';
+            li.innerText = `滿 ${act.C} 回饋 ${act.R} 多拿 ${targetCouponsByAct[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]} 張`;
+            profit += (targetCouponsByAct[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]) * act.R;
+            ul.appendChild(li);
+        });
+
+        document.getElementById('compare-if-discount-profit').innerText = profit;
+        $("#compare-if-discount").fadeIn();
+    }
+    else {
+        $("#compare-if-discount").fadeOut();
+    }
+
+    // 自動觸發分天計算
+    // document.getElementById('split-calc-btn-no-discount').click();
+    $('#split-card-no-discount').fadeIn();
+
+    const rawSpend = Number(document.getElementById('input-amount-no-discount').value);
+
+    console.log('原始刷卡金額 (rawSpend):', rawSpend);
+    console.log('目標券數 (targetCoupons):', targetCoupons);
+    console.log('各券目標券數 (targetCouponsByAct):', targetCouponsByAct);
+
+    console.log('\n>>> 使用「計算分天」按鈕，開始分天計算 <<<');
+    console.log('最終刷卡金額 (totalAmount):', rawSpend);
+    console.log('目標券數:', targetCoupons);
+
+    // 1. 執行分天計算
+    const { futureResults, futureGot } = dynamicSplitRemaining(rawSpend, sortedActs, targetCoupons);
+
+    console.log('分天計算結果：需要天數', futureResults.length);
+    console.log('每日建議結果：', futureResults);
+    console.log('未來取得券數:', futureGot);
+
+    // 2. 計算「分天後實際換到的總券數」
+    const totalVouchersObtained = {};
+    futureResults.forEach(day => {
+        day.dayVouchers.forEach((v, idx) => {
+            totalVouchersObtained[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = (totalVouchersObtained[`${sortedActs[idx].C}-${sortedActs[idx].R}`] || 0) + v.count;
+        });
+    });
+
+    // 3. 計算【餘券】= (分天後實際換到的總券數) – (現抵計算使用掉的目標券數)
+    const remainingVouchers = {};
+
+    console.log('目標券數:', targetCoupons);
+
+    notEnough = false;
+    sortedActs.forEach((act, idx) => {
+        const obtained = totalVouchersObtained[`${act.C}-${act.R}`] || 0;
+        const required = targetCouponsByAct[`${act.C}-${act.R}`] || 0;
+        remainingVouchers[`${act.C}-${act.R}`] = obtained - required;
+        notEnough = (remainingVouchers[`${act.C}-${act.R}`] < 0) || notEnough;
+    });
+
+    console.log('分天總計換到券數:', totalVouchersObtained);
+    console.log('分天後餘券狀況:', remainingVouchers);
+
+    // 4. 更新畫面
+    document.getElementById('split-days-no-discount').innerText = futureResults.length;
+    renderNoDissountDailyAmountInputs(futureResults);
+    if (notEnough) {
+        M.toast({ html: '目前的組合，換到的券會比「『不』現抵回饋計算」出的應獲得券數少！', classes: 'red' });
+        $('#split-alert-no-discount').html('⚠️目前的組合，換到的券會比「『不』現抵回饋計算」出的應獲得券數少！⚠️');
+    }
+    else {
+        $('#split-alert-no-discount').html('');
+    }
+
+    const leftoverUL = document.getElementById('leftover-list-no-discount');
+    leftoverUL.innerHTML = '';
+    sortedActs.forEach(act => {
+        const leftoverCount = totalVouchersObtained[`${act.C}-${act.R}`] ?? 0;
+        const li = document.createElement('li');
+        li.className = 'collection-item';
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 張`;
+        leftoverUL.appendChild(li);
+    });
+    document.getElementById('split-result-no-discount').style.display = 'block';
+
+    // 5. 比較刷卡金額
+    if (couponItemsDisscount.length !== 0 && originalAmount === Number(document.getElementById('input-amount').value)) {
+        // 讀取「現抵」階段的目標券數
+        let targetCouponsDisscount = [];
+        let targetCouponsByActDisscount = {};
+        couponItemsDisscount.forEach((li, idx) => {
+            const match = li.innerText.match(/：(\d+) 張/);
+            targetCouponsDisscount.push(match ? Number(match[1]) : 0);
+            targetCouponsByActDisscount[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
+        });
+
+        const ul = document.getElementById('split-day-compare-list-no-discount');
+        let profit = 0;
+        ul.innerHTML = '';
+        sortedActs.forEach((act, idx) => {
+            const li = document.createElement('li');
+            li.className = 'collection-item';
+            li.innerText = `滿 ${act.C} 回饋 ${act.R} 多拿 ${totalVouchersObtained[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]} 張`;
+            profit += (totalVouchersObtained[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]) * act.R;
+            ul.appendChild(li);
+        });
+
+        document.getElementById('split-day-compare-if-discount-profit').innerText = profit;
+        $("#split-day-compare-if-discount").fadeIn();
+    }
+    else {
+        $("#split-day-compare-if-discount").fadeOut();
+    }
+});
+
+// 監聽 #input-amount 按下 Enter 鍵時，自動觸發計算按鈕
+const inputAmountNoDissEl = document.getElementById('input-amount-no-discount');
+inputAmountNoDissEl.addEventListener('keydown', (e) => {
+    // 如果按下的按鍵是 Enter (keyCode 13 或 e.key === 'Enter')
+    if (e.key === 'Enter' || e.keyCode === 13) {
+        e.preventDefault(); // 防止表單自動提交或換行
+        document.getElementById('calc-btn-no-discount').click();
+    }
+});
+
+// 產生可編輯日刷金額的輸入框
+function renderNoDissountDailyAmountInputs(dailyResults, preserveInputs = null, startUpdateIndex = 0) {
+    const container = document.getElementById('days-amounts-list-no-discount');
+
+    container.innerHTML = ''; // 清空
+
+
+    dailyResults.forEach((day, idx) => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '8px';
+
+        const label = document.createElement('label');
+        label.innerText = `第 ${idx + 1} 天刷卡金額: `;
+        label.style.marginRight = '12px';
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = 0;
+        input.value = day.amount;
+        input.dataset.dayIndex = idx;
+        input.style.width = '150px';
+        input.className = 'validate';
+
+        // 回饋券文字：顯示「張數 + 面額」以及「當天總回饋金額」
+        const voucherDesc = day.dayVouchers
+            .map(v => `${v.count} 張 ${v.r} 元`)
+            .join(', ');
+        const voucherSpan = document.createElement('span');
+        voucherSpan.style.marginLeft = '20px';
+        voucherSpan.innerText = `回饋：${voucherDesc}（總共 ${day.totalDayRebate} 元）`;
+
+        const suggestSpan = document.createElement('span');
+        voucherSpan.style.marginLeft = '20px';
+        suggestSpan.innerText = `；建議金額(依推薦程度大到小): ${day.top10suggest.join(', ')}`;
+
+
+        li.appendChild(label);
+        li.appendChild(input);
+        li.appendChild(voucherSpan);
+        li.appendChild(suggestSpan);
+        container.appendChild(li);
+
+        bindInputNoDissountDebounce(input);
+        $("#days-amounts-list-no-discount").data('dailyResults', dailyResults);
+
+    });
+
+    M.updateTextFields();
+}
+
+function bindInputNoDissountDebounce(input) {
+    let debounceTimerNoDissount;
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimerNoDissount);
+        $('#split-alert-no-discount').html('<div class="progress"><div class="indeterminate"></div></div>');
+        debounceTimerNoDissount = setTimeout(() => {
+            const dayIndex = Number(input.dataset.dayIndex);
+            onNoDissountDailyAmountChange(dayIndex);
+        }, 3000);
+    });
+}
+
+// 使用者修改某天金額後，從該天開始重新計算後續
+function onNoDissountDailyAmountChange(changedDayIndex) {
+    const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
+    const couponItems = document.querySelectorAll('#coupons-list-no-discount .collection-item');
+    if (couponItems.length === 0) {
+        M.toast({ html: '請先執行現抵回饋計算', classes: 'red' });
+        return;
+    }
+
+    // 讀取「現抵回饋計算」階段的目標券數（也就是 couponsByAct）
+    let targetCoupons = [];
+    let targetCouponsByAct = {};
+    couponItems.forEach((li, idx) => {
+        const match = li.innerText.match(/：(\d+) 張/);
+        targetCoupons.push(match ? Number(match[1]) : 0);
+        targetCouponsByAct[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
+    });
+
+    const originalFinal = Number(document.getElementById('input-amount-no-discount').value);
+    const inputs = document.querySelectorAll('#days-amounts-list-no-discount input');
+    const userInputs = Array.from(inputs).map(input => {
+        const val = Number(input.value);
+        return isNaN(val) || val < 0 ? 0 : val;
+    });
+
+    console.log(`>>> 使用者修改第 ${changedDayIndex + 1} 天刷卡金額，觸發重新計算 <<<`);
+    console.log('用戶目前輸入金額陣列：', userInputs);
+
+    // 1. 計算「保留天數」之前（含第 changedDayIndex 天）已刷的金額與換到的券
+    let remainAmount = originalFinal;
+    let remainCoupons = [...targetCoupons];
+    const preservedResults = [];
+    const storedDailyResults = $("#days-amounts-list-no-discount").data('dailyResults');
+
+    for (let i = 0; i <= changedDayIndex; i++) {
+        const dayAmount = userInputs[i];
+        // 當天換券：只以「金額／門檻」與「日限 N」作為上限
+        const dayVouchers = sortedActs.map((act, idx) => {
+            const maxCountByAmt = Math.floor(dayAmount / act.C);
+            const count = Math.min(maxCountByAmt, act.N === Infinity ? 1e9 : act.N);
+            return { r: act.R, count };
+        });
+        const totalRebate = dayVouchers.reduce((acc, v) => acc + v.count * v.r, 0);
+        const actualSpend = dayAmount - totalRebate;
+
+        remainAmount -= dayAmount;
+        dayVouchers.forEach(({ count }, idx) => {
+            remainCoupons[idx] -= count;
+        });
+
+        preservedResults.push({
+            amount: dayAmount,
+            actualSpend,
+            dayVouchers,
+            totalDayRebate: totalRebate,
+            top10suggest: storedDailyResults[i].top10suggest
+        });
+        console.log(`保留第 ${i + 1} 天: 刷 ${dayAmount}，拿券 ${dayVouchers.map(v => v.count)}，剩金 ${remainAmount}，剩券 ${remainCoupons}`);
+    }
+
+    // 2. 用剩餘的 remainAmount 和 remainCoupons 做動態分天
+    const { futureResults, futureGot } = dynamicSplitRemaining(remainAmount, sortedActs, remainCoupons);
+
+    // 3. 合併保留結果 & 未來結果
+    const allResults = preservedResults.concat(futureResults);
+    const daysCount = allResults.length;
+
+    console.log('重新計算結果：需要天數', daysCount);
+    console.log('每日完整結果：', allResults);
+
+    // 4. 計算「分天後實際換到的總券數」
+    const totalVouchersObtained = {};
+    allResults.forEach(day => {
+        day.dayVouchers.forEach((v, idx) => {
+            totalVouchersObtained[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = (totalVouchersObtained[`${sortedActs[idx].C}-${sortedActs[idx].R}`] || 0) + v.count;
+        });
+    });
+
+    // 5. 計算【餘券】= (分天後實際換到的總券數) – (現抵計算使用掉的目標券數)
+    const remainingVouchers = {};
+
+    console.log('目標券數:', targetCoupons);
+
+    notEnough = false;
+    sortedActs.forEach((act, idx) => {
+        const obtained = totalVouchersObtained[`${act.C}-${act.R}`] || 0;
+        const required = targetCouponsByAct[`${act.C}-${act.R}`] || 0;
+        remainingVouchers[`${act.C}-${act.R}`] = obtained - required;
+        notEnough = (remainingVouchers[`${act.C}-${act.R}`] < 0) || notEnough;
+    });
+
+    console.log('實際取得的各回饋券總張數:', totalVouchersObtained);
+    console.log('各券餘數 (還給店家後):', remainingVouchers);
+
+    // 6. 更新畫面
+    document.getElementById('split-days-no-discount').innerText = daysCount;
+    renderNoDissountDailyAmountInputs(allResults, userInputs, changedDayIndex + 1);
+    if (notEnough) {
+        M.toast({ html: '目前的組合，換到的券會比「『不』現抵回饋計算」出的應獲得券數少！', classes: 'red' });
+        $('#split-alert-no-discount').html('⚠️目前的組合，換到的券會比「『不』現抵回饋計算」出的應獲得券數少！⚠️');
+    }
+    else {
+        $('#split-alert-no-discount').html('');
+    }
+
+    const leftoverUL = document.getElementById('leftover-list-no-discount');
+    leftoverUL.innerHTML = '';
+    sortedActs.forEach(act => {
+        const leftoverCount = totalVouchersObtained[`${act.C}-${act.R}`] ?? 0;
+        const li = document.createElement('li');
+        li.className = 'collection-item';
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 張`;
+        leftoverUL.appendChild(li);
+    });
+    document.getElementById('split-result-no-discount').style.display = 'block';
+
+    // 5. 比較刷卡金額
+    const couponItemsDisscount = document.querySelectorAll('#coupons-list .collection-item');
+    if (couponItemsDisscount.length !== 0 && originalFinal === Number(document.getElementById('input-amount').value)) {
+        // 讀取「現抵」階段的目標券數
+        let targetCouponsDisscount = [];
+        let targetCouponsByActDisscount = {};
+        couponItemsDisscount.forEach((li, idx) => {
+            const match = li.innerText.match(/：(\d+) 張/);
+            targetCouponsDisscount.push(match ? Number(match[1]) : 0);
+            targetCouponsByActDisscount[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
+        });
+
+        const ul = document.getElementById('split-day-compare-list-no-discount');
+        let profit = 0;
+        ul.innerHTML = '';
+        sortedActs.forEach((act, idx) => {
+            const li = document.createElement('li');
+            li.className = 'collection-item';
+            li.innerText = `滿 ${act.C} 回饋 ${act.R} 多拿 ${totalVouchersObtained[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]} 張`;
+            profit += (totalVouchersObtained[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]) * act.R;
+            ul.appendChild(li);
+        });
+
+        document.getElementById('split-day-compare-if-discount-profit').innerText = profit;
+        $("#split-day-compare-if-discount").fadeIn();
+    }
+    else {
+        $("#split-day-compare-if-discount").fadeOut();
+    }
+}
+
 
 // 初始化：載入並渲染活動
 loadActivities();

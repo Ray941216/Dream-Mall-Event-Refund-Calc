@@ -194,6 +194,8 @@
     <!-- help-btn Modal -->
     <div id="modal-help" class="modal">
         <div class="modal-content">
+            <h5>注意事項</h5>
+            <p class="red-text">這個 APP 是用來計算高雄夢時代的回饋活動，需要店家有配合才能參考使用。</p>
             <h5>操作說明</h5>
             <p>1. 點擊「新增活動」按鈕新增活動。</p>
             <p>2. 輸入活動滿額門檻 C (元)、回饋金額 R (元)、日限 N (份)。</p>
@@ -320,7 +322,7 @@
                 <!-- 功能三：分天刷卡策略（預設隱藏，當現抵完成後才顯示） -->
                 <div id="split-card" class="card" style="display: none;">
                     <div class="card-content">
-                        <span class="card-title">分天刷卡策略</span>
+                        <span class="card-title">現抵分天刷卡策略</span>
 
                         <div class="row" style="margin-bottom: 0;">
                             <div class="input-field col s8">
@@ -347,7 +349,7 @@
                                     <ol id="days-amounts-list" style="margin-top: 8px;"></ol>
                                 </li>
                                 <li class="collection-item">
-                                    <span>各活動還給店家後剩餘的券：</span>
+                                    <span>各活動『還給店家後』剩餘的券：</span>
                                     <ul id="leftover-list" class="collection" style="margin-top: 8px;"></ul>
                                 </li>
                             </ul>
@@ -355,7 +357,98 @@
                     </div>
                 </div>
             </div> <!-- 右側結束 -->
+
         </div> <!-- row 結束 -->
+        <hr>
+        <!-- 功能四：不現抵回饋 -->
+        <div class="row">
+            <div class="col s12 m6">
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">『不』現抵回饋計算</span>
+                        <div class="row" style="margin-bottom: 0;">
+                            <div class="input-field col s8">
+                                <input id="input-amount-no-discount" type="number" min="1" />
+                                <label for="input-amount-no-discount">總金額 (元)</label>
+                            </div>
+                            <div class="input-field col s4" style="padding-top: 24px;">
+                                <a id="calc-btn-no-discount" class="btn waves-effect waves-light">計算</a>
+                            </div>
+                        </div>
+
+                        <div id="calc-result-no-discount" class="section" style="display: none; padding-top: 0;">
+                            <ul class="collection with-header">
+                                <li class="collection-header">
+                                    <h6>計算結果</h6>
+                                </li>
+                                <li class="collection-item">
+                                    總回饋金額：<strong id="total-rebate-no-discount"></strong> 元
+                                </li>
+                                <li class="collection-item">
+                                    折數：<strong id="discount-rate-no-discount"></strong> ％
+                                </li>
+                                <li class="collection-item">
+                                    <span>可獲得各活動『用於其他店家』的折抵券張數：</span>
+                                    <ul id="coupons-list-no-discount" class="collection" style="margin-top: 8px;"></ul>
+                                </li>
+                                <li id="compare-if-discount" class="collection-item" style="display: none;">
+                                    <span>與現抵回饋獲得的數量比較:</span>
+                                    <p>多賺 <strong class="green-text" id="compare-if-discount-profit"></strong> 元</p>
+                                    <ul id="compare-list-no-discount" class="collection" style="margin-top: 8px;"></ul>
+                                </li>
+                            </ul>
+
+                            <!-- 現抵回饋計算結果中新增折疊顯示計算過程 -->
+                            <ul class="collapsible">
+                                <li>
+                                    <div class="collapsible-header">
+                                        <i class="material-icons">info_outline</i>查看詳細計算過程
+                                    </div>
+                                    <div class="collapsible-body">
+                                        <pre id="calc-steps-no-discount" style="white-space: pre-wrap;"></pre>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col s12 m6">
+                <!-- 功能三：分天刷卡策略（預設隱藏，當現抵完成後才顯示） -->
+                <div id="split-card-no-discount" class="card" style="display: none;">
+                    <div class="card-content">
+                        <span class="card-title">『不』現抵分天刷卡策略</span>
+                        <div id="split-result-no-discount" class="section" style="display: none; padding-top: 0;">
+                            <ul class="collection with-header">
+                                <li class="collection-header">
+                                    <h6>分天建議</h6>
+                                    <h6>⚠️不一定是最佳解⚠️</h6>
+                                </li>
+                                <li class="collection-item">
+                                    至少需要天數：<strong id="split-days-no-discount"></strong> 天 <strong
+                                        id="split-alert-no-discount" class="red-text"> </strong>
+                                </li>
+                                <li class="collection-item">
+                                    <span>每日刷卡金額：</span>
+                                    <ol id="days-amounts-list-no-discount" style="margin-top: 8px;"></ol>
+                                </li>
+                                <li class="collection-item">
+                                    <span>可獲得各活動『用於其他店家』的折抵券張數：</span>
+                                    <ul id="leftover-list-no-discount" class="collection" style="margin-top: 8px;"></ul>
+                                </li>
+                                <li id="split-day-compare-if-discount" class="collection-item" style="display: none;">
+                                    <span>與現抵回饋獲得的數量比較:</span>
+                                    <p>多賺 <strong class="green-text" id="split-day-compare-if-discount-profit"></strong>
+                                        元</p>
+                                    <ul id="split-day-compare-list-no-discount" class="collection"
+                                        style="margin-top: 8px;"></ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Materialize JS & 初始化 -->
