@@ -55,6 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadActivities();
     renderActivities();
+
+    $(".tap-target").tapTarget('open');
 });
 
 const activityContainer = document.getElementById('activity-container');
@@ -596,10 +598,12 @@ function onDailyAmountChange(changedDayIndex) {
 
     console.log('目標券數:', targetCoupons);
 
+    notEnough = false;
     sortedActs.forEach((act, idx) => {
         const obtained = totalVouchersObtained[`${act.C}-${act.R}`] || 0;
         const required = targetCouponsByAct[`${act.C}-${act.R}`] || 0;
         remainingVouchers[`${act.C}-${act.R}`] = obtained - required;
+        notEnough = (remainingVouchers[`${act.C}-${act.R}`] < 0) || notEnough;
     });
 
     console.log('實際取得的各回饋券總張數:', totalVouchersObtained);
@@ -608,6 +612,13 @@ function onDailyAmountChange(changedDayIndex) {
     // 6. 更新畫面
     document.getElementById('split-days').innerText = daysCount;
     renderDailyAmountInputs(allResults, userInputs, changedDayIndex + 1);
+    if (notEnough) {
+        M.toast({ html: '分天換到的券不足！', classes: 'red' });
+        $('#split-alert').html('⚠️分天換到的券不足！⚠️');
+    }
+    else {
+        $('#split-alert').html('');
+    }
 
     const leftoverUL = document.getElementById('leftover-list');
     leftoverUL.innerHTML = '';
@@ -673,10 +684,12 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
 
     console.log('目標券數:', targetCoupons);
 
+    notEnough = false;
     sortedActs.forEach((act, idx) => {
         const obtained = totalVouchersObtained[`${act.C}-${act.R}`] || 0;
         const required = targetCouponsByAct[`${act.C}-${act.R}`] || 0;
         remainingVouchers[`${act.C}-${act.R}`] = obtained - required;
+        notEnough = (remainingVouchers[`${act.C}-${act.R}`] < 0) || notEnough;
     });
 
     console.log('分天總計換到券數:', totalVouchersObtained);
@@ -685,6 +698,13 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
     // 4. 更新畫面
     document.getElementById('split-days').innerText = futureResults.length;
     renderDailyAmountInputs(futureResults);
+    if (notEnough) {
+        M.toast({ html: '分天換到的券不足！', classes: 'red' });
+        $('#split-alert').html('⚠️分天換到的券不足！⚠️');
+    }
+    else {
+        $('#split-alert').html('');
+    }
 
     const leftoverUL = document.getElementById('leftover-list');
     leftoverUL.innerHTML = '';

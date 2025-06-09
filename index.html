@@ -96,7 +96,8 @@
         }
 
         /* Collapsible Header：深藍底 + 黃金字 */
-        .collapsible .collapsible-header {
+        .collapsible .collapsible-header,
+        .tap-target {
             background-color: var(--primary-color);
             color: var(--accent-color);
             font-weight: 500;
@@ -162,9 +163,42 @@
         <div class="nav-wrapper">
             <a href="#" class="brand-logo center">夢時代回饋計算器</a>
         </div>
+
+
     </nav>
+    <!-- 操作說明按鈕，按下會跳出 Modal，按鈕會永遠懸浮固定在右下方 -->
+    <div class="fixed-action-btn">
+        <a href="#modal-help" class="btn-floating btn-large modal-trigger" id="help-btn">
+            <i class="large material-icons">help</i>
+        </a>
+    </div>
+
+    <!-- Tap Target Structure -->
+    <div class="tap-target" data-target="help-btn">
+        <div class="tap-target-content">
+            <h5>操作說明在這裡</h5>
+            <p>隨時可以點開來看</p>
+        </div>
+    </div>
+
+    <!-- help-btn Modal -->
+    <div id="modal-help" class="modal">
+        <div class="modal-content">
+            <h5>操作說明</h5>
+            <p>1. 點擊「新增活動」按鈕新增活動。</p>
+            <p>2. 輸入活動滿額門檻 C (元)、回饋金額 R (元)、日限 N (份)。</p>
+            <p>3. 點擊「編輯」按鈕編輯活動。</p>
+            <p>4. 點擊「刪除」按鈕刪除活動。</p>
+            <p>5. 點擊「計算」按鈕計算各活動還給店家後剩餘的券。</p>
+            <p>6. 每天刷卡金額可變更。</p>
+        </div>
+        <div class="modal-footer">
+            <a href="#!" class="modal-close waves-effect waves-red btn-flat">關閉</a>
+        </div>
+    </div>
 
     <main class="container">
+
         <!-- 新增活動 Modal -->
         <div id="modal-activity-form" class="modal">
             <div class="modal-content">
@@ -246,7 +280,7 @@
                                     折數：<strong id="discount-rate"></strong> ％
                                 </li>
                                 <li class="collection-item">
-                                    <span>各活動折抵券張數：</span>
+                                    <span>各活動應返還店家的折抵券張數：</span>
                                     <ul id="coupons-list" class="collection" style="margin-top: 8px;"></ul>
                                 </li>
                             </ul>
@@ -288,7 +322,8 @@
                                     <h6>⚠️不一定是最佳解，需要注意返還後剩餘的券是否足夠⚠️</h6>
                                 </li>
                                 <li class="collection-item">
-                                    至少需要天數：<strong id="split-days"></strong> 天
+                                    至少需要天數：<strong id="split-days"></strong> 天 <strong id="split-alert"
+                                        class="red-text"> </strong>
                                 </li>
                                 <li class="collection-item">
                                     <span>每日刷卡金額：</span>
