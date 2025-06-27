@@ -76,6 +76,18 @@ document.addEventListener('DOMContentLoaded', () => {
     renderActivities();
 
     $(".tap-target").tapTarget('open');
+
+    new QRCode(document.getElementById("qrcode"), {
+        text: "https://ray941216.github.io/Dream-Mall-Event-Refund-Calc/",
+        width: 200,
+        height: 200
+    });
+
+    new QRCode(document.getElementById("qrcode-footer"), {
+        text: "https://ray941216.github.io/Dream-Mall-Event-Refund-Calc/",
+        width: 100,
+        height: 100
+    });
 });
 
 const activityContainer = document.getElementById('activity-container');

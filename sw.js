@@ -12,6 +12,7 @@ const URLS_TO_CACHE = [
     'https://code.jquery.com/jquery-3.7.1.min.js',
     'https://fonts.googleapis.com/icon?family=Material+Icons',
     'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7714309118972764',
+    'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/icon-180.png'

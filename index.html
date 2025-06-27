@@ -165,6 +165,10 @@
             vertical-align: middle;
         }
 
+        #qrcode {
+            margin-top: 20px;
+        }
+
         /* 如需在行動版上顯示更大字級，可在此擴充 */
         @media (max-width: 600px) {
             .brand-logo {
@@ -228,6 +232,9 @@
             <a href="https://docs.google.com/spreadsheets/d/1xhbk9zMrNfD7ZK0ml_RuydBVK9Pttvq9XPM5JngPjyw/edit?usp=sharing"
                 target="_blank" id="view-bug-btn" class="btn waves-effect waves-light btn-large">目前已知錯誤</a>
             <a id="report-bug-btn" class="btn waves-effect waves-light btn-large">錯誤回報</a>
+            <hr>
+            <h5>歡迎分享</h5>
+            <div id="qrcode"></div>
 
         </div>
         <div class="modal-footer">
@@ -471,16 +478,14 @@
     </main>
 
     <footer class="page-footer">
-        <script async
-            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7714309118972764"
-            crossorigin="anonymous"></script>
-        <!-- 夢時代計算機 -->
-        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-7714309118972764"
-            data-ad-slot="3591413532" data-ad-format="auto" data-full-width-responsive="true"></ins>
-        <script>
-            (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-
+        <div class="container">
+            <div class="row">
+                <div class="col s4">
+                    <h5 class="white-text">歡迎分享</h5>
+                    <div id="qrcode-footer"></div>
+                </div>
+            </div>
+        </div>
     </footer>
 
     <!-- Materialize JS & 初始化 -->
@@ -496,6 +501,9 @@
 
     <!-- 主要邏輯程式 -->
     <script src="app.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 
     <!-- 註冊 Service Worker，並在有新版時顯示通知 -->
     <script>
@@ -523,7 +531,14 @@
         }
     </script>
 
-
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7714309118972764"
+        crossorigin="anonymous"></script>
+    <!-- 夢時代計算機 -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-7714309118972764" data-ad-slot="3591413532"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
 </body>
 
 </html>
