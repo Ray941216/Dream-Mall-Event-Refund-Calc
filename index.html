@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="google-adsense-account" content="ca-pub-7714309118972764">
     <title>高雄夢時代回饋計算器</title>
 
     <!-- PWA：manifest.json -->
@@ -125,10 +126,22 @@
             box-shadow: 0 1px 0 0 var(--primary-color) !important;
         }
 
+        body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
         /* 主內容區上下間距 */
         main {
             margin-top: 64px;
             margin-bottom: 16px;
+            flex: 1 0 auto;
+        }
+
+        footer {
+            background-color: var(--primary-color) !important;
+            color: var(--text-on-primary) !important;
         }
 
         /* 左側活動設定清單可捲動 */
@@ -196,6 +209,7 @@
         <div class="modal-content">
             <h5>注意事項</h5>
             <p class="red-text">這個 APP 是用來計算高雄夢時代的回饋活動，需要店家有配合才能參考使用。</p>
+            <hr>
             <h5>操作說明</h5>
             <p>1. 點擊「新增活動」按鈕新增活動。</p>
             <p>2. 輸入活動滿額門檻 C (元)、回饋金額 R (元)、日限 N (份)。</p>
@@ -203,13 +217,18 @@
             <p>4. 點擊「刪除」按鈕刪除活動。</p>
             <p>5. 點擊「計算」按鈕計算各活動還給店家後剩餘的券。</p>
             <p>6. 每天刷卡金額可變更。</p>
+            <hr>
             <h5>安裝成應用程式</h5>
             <h6>電腦: </h6>
             <p>使用 Chrome 或者 Edge 瀏覽器 開啟網頁後，在網址列會提示你可以安裝成應用程式。直接點擊就可以了。</p>
             <h6>iOS: </h6>
             <p>通過 Safari 開啟後，點擊『 <span class="material-icons">ios_share</span> 』，找到『加入主畫面 <span
-                    class="material-icons">add_box</span>
-                』，即可安裝成可離線使用的 APP。</p>
+                    class="material-icons">add_box</span>』，即可安裝成可離線使用的 APP。</p>
+            <hr>
+            <a href="https://docs.google.com/spreadsheets/d/1xhbk9zMrNfD7ZK0ml_RuydBVK9Pttvq9XPM5JngPjyw/edit?usp=sharing"
+                target="_blank" id="view-bug-btn" class="btn waves-effect waves-light btn-large">目前已知錯誤</a>
+            <a id="report-bug-btn" class="btn waves-effect waves-light btn-large">錯誤回報</a>
+
         </div>
         <div class="modal-footer">
             <a href="#!" class="modal-close waves-effect waves-red btn-flat">關閉</a>
@@ -293,7 +312,7 @@
                                     最終刷卡金額：<strong id="final-spend"></strong> 元
                                 </li>
                                 <li class="collection-item">
-                                    總回饋金額：<strong id="total-rebate"></strong> 元
+                                    總回饋金額(零元發票金額)：<strong id="total-rebate"></strong> 元
                                 </li>
                                 <li class="collection-item">
                                     折數：<strong id="discount-rate"></strong> ％
@@ -450,6 +469,19 @@
             </div>
         </div>
     </main>
+
+    <footer class="page-footer">
+        <script async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7714309118972764"
+            crossorigin="anonymous"></script>
+        <!-- 夢時代計算機 -->
+        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-7714309118972764"
+            data-ad-slot="3591413532" data-ad-format="auto" data-full-width-responsive="true"></ins>
+        <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+
+    </footer>
 
     <!-- Materialize JS & 初始化 -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

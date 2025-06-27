@@ -11,6 +11,7 @@ const URLS_TO_CACHE = [
     'https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js',
     'https://code.jquery.com/jquery-3.7.1.min.js',
     'https://fonts.googleapis.com/icon?family=Material+Icons',
+    'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7714309118972764',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/icon-180.png'
