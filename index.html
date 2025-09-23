@@ -212,7 +212,6 @@
     <div id="modal-help" class="modal">
         <div class="modal-content">
             <h5>注意事項</h5>
-            <p class="red-text">目前已知錯誤：在部分小額折抵機算會出錯</p>
             <p class="red-text">原本這個 APP 是用來計算高雄夢時代的回饋活動，需要店家有配合才能參考使用。目前正在測試擴展成所有百貨活動都可用。</p>
             <hr>
             <h5>操作說明</h5>
@@ -303,7 +302,7 @@
 
                         <div class="row" style="margin-bottom: 0;">
                             <div class="input-field col s8">
-                                <input id="input-amount" type="number" min="1" />
+                                <input id="input-amount" type="number" min="0" step="100" />
                                 <label for="input-amount">總金額 (元)</label>
                             </div>
                             <div class="input-field col s4" style="padding-top: 24px;">
@@ -317,10 +316,11 @@
                                     <h6>計算結果</h6>
                                 </li>
                                 <li class="collection-item">
-                                    最終刷卡金額：<strong id="final-spend"></strong> 元
+                                    最終刷卡金額：<strong id="final-spend" class="red-text"></strong> 元
                                 </li>
                                 <li class="collection-item">
-                                    總回饋金額(零元發票金額)：<strong id="total-rebate"></strong> 元
+                                    現抵金額(零元發票金額)：<strong id="total-rebate" class="red-text"></strong> 元
+                                    <h6>⚠️檢查 現抵金額 ＋ 最終刷卡金額 應等於『總金額』⚠️</h6>
                                 </li>
                                 <li class="collection-item">
                                     折數：<strong id="discount-rate"></strong> ％
@@ -328,6 +328,21 @@
                                 <li class="collection-item">
                                     <span>各活動應返還店家的折抵券張數：</span>
                                     <ul id="coupons-list" class="collection" style="margin-top: 8px;"></ul>
+                                </li>
+                                <li class="collection-item">
+                                    剩餘未使用回饋金額(餘券金額)：<strong id="remain-rebate" class="green-text"></strong> 元
+                                    <h6>⚠️有餘券時，上方回饋金額可能還有折抵空間⚠️</h6>
+                                </li>
+                                <li class="collection-item">
+                                    <span>各活動的折抵券剩餘張數：</span>
+                                    <ul id="remain-coupons-list" class="collection" style="margin-top: 8px;"></ul>
+                                </li>
+                                <li class="collection-item">
+                                    總回饋金額(現抵金額 + 剩餘未使用回饋金額)：<strong id="total-remain-rebate"></strong> 元
+                                </li>
+                                <li class="collection-item">
+                                    <span>各活動的折抵券實刷金額換得總張數：</span>
+                                    <ul id="total-remain-coupons-list" class="collection" style="margin-top: 8px;"></ul>
                                 </li>
                             </ul>
 
@@ -395,7 +410,7 @@
                         <span class="card-title">『不』現抵回饋計算</span>
                         <div class="row" style="margin-bottom: 0;">
                             <div class="input-field col s8">
-                                <input id="input-amount-no-discount" type="number" min="1" />
+                                <input id="input-amount-no-discount" type="number" min="1" step="100" />
                                 <label for="input-amount-no-discount">總金額 (元)</label>
                             </div>
                             <div class="input-field col s4" style="padding-top: 24px;">

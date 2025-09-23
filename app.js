@@ -212,6 +212,7 @@ function coreCalculateWithSteps(originalAmount, acts) {
     let currentAmount = originalAmount;
     const firstRoundCounts = new Array(acts.length).fill(0);
     const secondRoundCounts = new Array(acts.length).fill(0);
+    const RemainCounts = new Array(acts.length).fill(0);
     let stepLog = `原始消費金額：${originalAmount} 元\n\n第一輪計算（依序計算每活動可換券張數）：\n`;
 
     acts.forEach((act, idx) => {
@@ -233,13 +234,26 @@ function coreCalculateWithSteps(originalAmount, acts) {
         const { C, R } = act;
         const actualCoupons = Math.floor(currentAmount / C);
         const deficit = firstRoundCounts[idx] - actualCoupons;
-        secondRoundCounts[idx] = actualCoupons;
         stepLog += `活動${idx + 1}：餘額 ${currentAmount} 元 / ${C} = ${actualCoupons} 張券\n`;
-        if (deficit > 0) currentAmount += deficit * R;
+        if (deficit >= 0) {
+            currentAmount += deficit * R;
+            secondRoundCounts[idx] = actualCoupons;
+        }
+        else if (deficit < 0) {
+            RemainCounts[idx] = Math.abs(deficit)
+            secondRoundCounts[idx] = firstRoundCounts[idx];
+        }
+
+
         if (deficit > 0) {
             stepLog += `  有券數不足，補回金額: ${deficit} x ${R} = ${deficit * R} 元\n`;
             stepLog += `  更新餘額為 ${currentAmount} 元\n`;
-        } else {
+        }
+        else if (deficit < 0) {
+            stepLog += `  有餘券: ${RemainCounts[idx]} x ${R} = ${RemainCounts[idx] * R} 元\n`;
+            stepLog += `  實刷金額共換到 ${firstRoundCounts[idx] + RemainCounts[idx]} 張，實際使用 ${secondRoundCounts[idx]} 張 x ${R} = ${secondRoundCounts[idx] * R} 元\n`;
+        }
+        else {
             stepLog += "  無券數不足，餘額不變\n";
         }
     });
@@ -249,9 +263,13 @@ function coreCalculateWithSteps(originalAmount, acts) {
     const finalSpend = currentAmount;
     const discountRate = parseFloat(((finalSpend / originalAmount) * 100).toFixed(5));
 
-    stepLog += `\n計算結果：\n  最終刷卡金額: ${finalSpend} 元\n  總回饋金額: ${totalRebate} 元\n  折數: ${discountRate} %\n`;
+    let remainRebate = 0;
+    RemainCounts.forEach((count, idx) => remainRebate += count * acts[idx].R)
 
-    return { finalSpend, couponsByAct: secondRoundCounts, totalRebate, discountRate, stepLog };
+    stepLog += `\n計算結果：\n  最終刷卡金額: ${finalSpend} 元\n  現抵回饋金額: ${totalRebate} 元\n  折數: ${discountRate} %\n`;
+    stepLog += `剩餘未使用回饋金額: ${remainRebate} 元\n  總回饋金額: ${totalRebate + remainRebate} 元\n  折數: ${(originalAmount - (totalRebate + remainRebate)) / originalAmount} %\n`;
+
+    return { finalSpend, couponsByAct: secondRoundCounts, totalRebate, discountRate, RemainCounts, remainRebate, stepLog };
 }
 
 document.getElementById('calc-btn').addEventListener('click', () => {
@@ -276,12 +294,17 @@ document.getElementById('calc-btn').addEventListener('click', () => {
     $('#input-amount-no-discount').val(originalAmount);
 
     const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
-    const { finalSpend, couponsByAct, totalRebate, discountRate, stepLog } = coreCalculateWithSteps(originalAmount, sortedActs);
+    const { finalSpend, couponsByAct, totalRebate, discountRate, RemainCounts, remainRebate, stepLog } = coreCalculateWithSteps(originalAmount, sortedActs);
 
     document.getElementById('final-spend').innerText = finalSpend;
     document.getElementById('total-rebate').innerText = totalRebate;
     document.getElementById('discount-rate').innerText = discountRate;
     document.getElementById('calc-steps').innerText = stepLog;
+
+    document.getElementById('remain-rebate').innerText = remainRebate;
+    document.getElementById('total-remain-rebate').innerText = totalRebate + remainRebate;
+
+
 
     document.getElementById('input-target-spend').value = finalSpend;
     M.updateTextFields();
@@ -293,6 +316,24 @@ document.getElementById('calc-btn').addEventListener('click', () => {
         li.className = 'collection-item';
         li.innerText = `滿 ${act.C} 回饋 ${act.R}：${couponsByAct[idx]} 張`;
         ul.appendChild(li);
+    });
+
+    const ul2 = document.getElementById('remain-coupons-list');
+    ul2.innerHTML = '';
+    sortedActs.forEach((act, idx) => {
+        const li = document.createElement('li');
+        li.className = 'collection-item';
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：${RemainCounts[idx]} 張`;
+        ul2.appendChild(li);
+    });
+
+    const ul3 = document.getElementById('total-remain-coupons-list');
+    ul3.innerHTML = '';
+    sortedActs.forEach((act, idx) => {
+        const li = document.createElement('li');
+        li.className = 'collection-item';
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：${couponsByAct[idx] + RemainCounts[idx]} 張`;
+        ul3.appendChild(li);
     });
 
     document.getElementById('calc-result').style.display = 'block';
@@ -870,7 +911,7 @@ document.getElementById('calc-btn-no-discount').addEventListener('click', () => 
         targetCouponsByAct[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
     });
 
-    const couponItemsDisscount = document.querySelectorAll('#coupons-list .collection-item');
+    const couponItemsDisscount = document.querySelectorAll('#total-remain-coupons-list .collection-item');
     if (couponItemsDisscount.length !== 0 && originalAmount === Number(document.getElementById('input-amount').value)) {
         // 讀取「現抵」階段的目標券數
         let targetCouponsDisscount = [];
