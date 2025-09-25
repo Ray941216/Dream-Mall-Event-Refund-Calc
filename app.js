@@ -19,6 +19,18 @@ console.log = function (...args) {
 // 現在，你可以透過 logMessages 陣列訪問所有 console.log 輸出
 // 例如：console.log(logMessages);
 
+// ▶︎ 放在檔案前面工具區：新增「依活動設定產生券單位文字」
+function voucherUnitText(act) {
+    // 整券：顯示「1 張 {R}」
+    if (act.redeemType !== 'partial' || !act.minRedeem) {
+        return `1 張 ${act.R}`;
+    }
+    // 可拆分：顯示「{R/minRedeem} 張 {minRedeem}」
+    const pieces = Math.floor(act.R / act.minRedeem);
+    return `${pieces} 張 ${act.minRedeem}`;
+}
+
+
 
 // ---------------------
 // 1. 活動設定管理：使用 localStorage 存／取
@@ -37,9 +49,18 @@ function loadActivities() {
     }
     // 把 0 或 null 當成 Infinity 處理
     for (let i = 0; i < activityList.length; i++) {
-        if (activityList[i].N === 0 || activityList[i].N === null) {
-            activityList[i].N = Infinity;
+        const act = activityList[i] || {};
+        if (act.N === 0 || act.N === null) {
+            act.N = Infinity;
         }
+        act.redeemType = act.redeemType === 'partial' ? 'partial' : 'full';
+        if (act.redeemType === 'partial') {
+            const parsedMin = Number(act.minRedeem);
+            act.minRedeem = (!Number.isNaN(parsedMin) && parsedMin >= 100) ? parsedMin : 100;
+        } else {
+            act.minRedeem = act.R;
+        }
+        activityList[i] = act;
     }
 }
 
@@ -47,13 +68,13 @@ function saveActivities() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(activityList));
 }
 
-function addActivity(C, R, N) {
-    activityList.push({ C, R, N });
+function addActivity(activity) {
+    activityList.push(activity);
     saveActivities();
 }
 
-function updateActivity(index, C, R, N) {
-    activityList[index] = { C, R, N };
+function updateActivity(index, activity) {
+    activityList[index] = activity;
     saveActivities();
 }
 
@@ -61,6 +82,7 @@ function removeActivity(index) {
     activityList.splice(index, 1);
     saveActivities();
 }
+
 
 // ---------------------
 // 2. 活動設定 UI：渲染／Modal 管理
@@ -74,6 +96,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadActivities();
     renderActivities();
+
+    const redeemTypeRadios = document.querySelectorAll('input[name="redeem-type"]');
+    Array.from(redeemTypeRadios).forEach(radio => {
+        radio.addEventListener('change', (event) => {
+            toggleMinRedeemRow(event.target.value);
+        });
+    });
+    const defaultRedeemType = Array.from(redeemTypeRadios).find(radio => radio.checked);
+    toggleMinRedeemRow(defaultRedeemType ? defaultRedeemType.value : 'full');
 
     $(".tap-target").tapTarget('open');
 
@@ -93,11 +124,49 @@ document.addEventListener('DOMContentLoaded', () => {
 const activityContainer = document.getElementById('activity-container');
 let editIndex = null;
 
+function toggleMinRedeemRow(redeemType) {
+    const row = document.getElementById('min-redeem-row');
+    if (!row) return;
+    if (redeemType === 'partial') {
+        row.style.display = '';
+    } else {
+        row.style.display = 'none';
+    }
+    M.updateTextFields();
+}
+
+// function renderActivities() {
+//     activityContainer.innerHTML = '';
+//     activityList.forEach((act, idx) => {
+//         const li = document.createElement('li');
+//         li.className = 'collection-item';
+//         const redeemText = act.redeemType === 'partial'
+//             ? `折抵方式：可拆用，每次至少 <strong>${act.minRedeem}</strong> 元`
+//             : '折抵方式：整券折抵';
+//         li.innerHTML = `
+//       <div>
+//         滿 <strong>${act.C}</strong> 元 回饋 <strong>${act.R}</strong> 元，
+//         日限 ${act.N === Infinity ? '無限' : act.N} 份
+//         <a href="#!" class="secondary-content">
+//           <i class="material-icons pointer" data-action="edit" data-index="${idx}">edit</i>
+//           <i class="material-icons pointer" data-action="delete" data-index="${idx}">delete</i>
+//         </a>
+//         <div class="grey-text text-darken-1" style="margin-top: 4px;">${redeemText}</div>
+//       </div>
+//     `;
+//         activityContainer.appendChild(li);
+//     });
+// }
+
+// ▶︎ 替換 renderActivities() 內部的 li.innerHTML（讓活動清單顯示券單位）
 function renderActivities() {
     activityContainer.innerHTML = '';
     activityList.forEach((act, idx) => {
         const li = document.createElement('li');
         li.className = 'collection-item';
+        const redeemText = act.redeemType === 'partial'
+            ? `折抵方式：可拆用（單次至少 <strong>${act.minRedeem}</strong> 元），券單位：<strong>${voucherUnitText(act)}</strong>`
+            : `折抵方式：整券折抵，券單位：<strong>${voucherUnitText(act)}</strong>`;
         li.innerHTML = `
       <div>
         滿 <strong>${act.C}</strong> 元 回饋 <strong>${act.R}</strong> 元，
@@ -106,16 +175,25 @@ function renderActivities() {
           <i class="material-icons pointer" data-action="edit" data-index="${idx}">edit</i>
           <i class="material-icons pointer" data-action="delete" data-index="${idx}">delete</i>
         </a>
+        <div class="grey-text text-darken-1" style="margin-top: 4px;">${redeemText}</div>
       </div>
     `;
         activityContainer.appendChild(li);
     });
 }
 
+
 function clearModalInputs() {
-    ['input-C', 'input-R', 'input-N'].forEach(id => {
+    ['input-C', 'input-R', 'input-N', 'input-min-redeem'].forEach(id => {
         document.getElementById(id).value = '';
     });
+    const fullRadio = document.getElementById('redeem-type-full');
+    const partialRadio = document.getElementById('redeem-type-partial');
+    if (fullRadio && partialRadio) {
+        fullRadio.checked = true;
+        partialRadio.checked = false;
+    }
+    toggleMinRedeemRow('full');
     M.updateTextFields();
 }
 
@@ -123,6 +201,22 @@ function fillModalInputs(act) {
     document.getElementById('input-C').value = act.C;
     document.getElementById('input-R').value = act.R;
     document.getElementById('input-N').value = act.N === Infinity ? '' : act.N;
+    const fullRadio = document.getElementById('redeem-type-full');
+    const partialRadio = document.getElementById('redeem-type-partial');
+    if (act.redeemType === 'partial') {
+        if (fullRadio && partialRadio) {
+            partialRadio.checked = true;
+            fullRadio.checked = false;
+        }
+        document.getElementById('input-min-redeem').value = act.minRedeem ?? '';
+    } else {
+        if (fullRadio && partialRadio) {
+            fullRadio.checked = true;
+            partialRadio.checked = false;
+        }
+        document.getElementById('input-min-redeem').value = '';
+    }
+    toggleMinRedeemRow(act.redeemType);
     M.updateTextFields();
 }
 
@@ -169,11 +263,38 @@ document.getElementById('modal-save-btn').addEventListener('click', () => {
         return;
     }
 
+    const redeemTypeRadios = document.querySelectorAll('input[name="redeem-type"]');
+    const checkedRedeemRadio = Array.from(redeemTypeRadios).find(radio => radio.checked);
+    const redeemType = checkedRedeemRadio ? checkedRedeemRadio.value : 'full';
+    let minRedeem = null;
+    if (redeemType === 'partial') {
+        const minRedeemInput = document.getElementById('input-min-redeem').value;
+        const parsedMin = Number(minRedeemInput);
+        if (Number.isNaN(parsedMin) || parsedMin < 100) {
+            M.toast({ html: '最低折抵金額需大於等於 100', classes: 'red' });
+            return;
+        }
+        if (parsedMin % 100 !== 0) {
+            M.toast({ html: '最低折抵金額需為 100 的倍數', classes: 'red' });
+            return;
+        }
+        if (parsedMin > R) {
+            M.toast({ html: '最低折抵金額不得大於回饋金額', classes: 'red' });
+            return;
+        }
+        minRedeem = parsedMin;
+    }
+    else {
+        minRedeem = R
+    }
+
+    const payload = { C, R, N, redeemType, minRedeem };
+
     if (editIndex !== null) {
-        updateActivity(editIndex, C, R, N);
+        updateActivity(editIndex, payload);
         M.toast({ html: '活動已更新', classes: 'green' });
     } else {
-        addActivity(C, R, N);
+        addActivity(payload);
         M.toast({ html: '活動已新增', classes: 'green' });
     }
 
@@ -222,19 +343,20 @@ function coreCalculateWithSteps(originalAmount, acts) {
         firstRoundCounts[idx] = maxByAmount;
 
         stepLog += `活動${idx + 1} (滿${C}元回饋${R}元)：\n`;
-        stepLog += `  消費金額 / 門檻(含回饋) = ${currentAmount} / ${threshold} = ${maxByAmount} 張 \n`;
-        stepLog += `  第一輪換券數: ${firstRoundCounts[idx]} 張\n`;
+        stepLog += `  消費金額 / 門檻(含回饋) = ${currentAmount} / ${threshold} = ${maxByAmount} 份 \n`;
+        stepLog += `  第一輪換券數: ${firstRoundCounts[idx]} 份\n`;
         stepLog += `  扣除回饋金額: ${firstRoundCounts[idx]} x ${R} = ${firstRoundCounts[idx] * R} 元\n`;
         currentAmount -= maxByAmount * R; // 扣掉已用來換券的金額
         stepLog += `  餘額更新為: ${currentAmount} 元\n\n`;
     });
 
     stepLog += "第二輪檢查（餘額能換券張數是否少於第一輪，少的券需補回金額）：\n";
+    needCheckFinalCouponExchange = false
     acts.forEach((act, idx) => {
         const { C, R } = act;
         const actualCoupons = Math.floor(currentAmount / C);
         const deficit = firstRoundCounts[idx] - actualCoupons;
-        stepLog += `活動${idx + 1}：餘額 ${currentAmount} 元 / ${C} = ${actualCoupons} 張券\n`;
+        stepLog += `活動${idx + 1}：餘額 ${currentAmount} 元 / ${C} = ${actualCoupons} 份\n`;
         if (deficit >= 0) {
             currentAmount += deficit * R;
             secondRoundCounts[idx] = actualCoupons;
@@ -246,6 +368,7 @@ function coreCalculateWithSteps(originalAmount, acts) {
 
 
         if (deficit > 0) {
+            needCheckFinalCouponExchange = true
             stepLog += `  有券數不足，補回金額: ${deficit} x ${R} = ${deficit * R} 元\n`;
             stepLog += `  更新餘額為 ${currentAmount} 元\n`;
         }
@@ -258,18 +381,120 @@ function coreCalculateWithSteps(originalAmount, acts) {
         }
     });
 
+    if (needCheckFinalCouponExchange) {
+        stepLog += "\n\n金額在第二輪發生異動，重新檢查最終返券後剩餘數量。"
+        acts.forEach((act, idx) => {
+            const { C, R } = act;
+            const actualCoupons = Math.floor(currentAmount / C);
+            const deficit = secondRoundCounts[idx] - actualCoupons;
+            stepLog += `活動${idx + 1}：餘額 ${currentAmount} 元 / ${C} = ${actualCoupons} 張券\n`;
+            if (deficit < 0) {
+                RemainCounts[idx] = Math.abs(deficit)
+            }
+
+            if (deficit < 0) {
+                stepLog += `  有餘券: ${RemainCounts[idx]} x ${R} = ${RemainCounts[idx] * R} 元\n`;
+                stepLog += `  實刷金額共換到 ${secondRoundCounts[idx] + RemainCounts[idx]} 張，實際使用 ${secondRoundCounts[idx]} 張 x ${R} = ${secondRoundCounts[idx] * R} 元\n`;
+            }
+            else {
+                stepLog += "  無券數不足，餘額不變\n";
+            }
+        });
+    }
+
+    console.log(secondRoundCounts);
+    console.log(RemainCounts);
+    const thirdRoundCounts = new Array(acts.length).fill(0);
+    const thirdRoundRemainCounts = new Array(acts.length).fill(0);
+    acts.forEach((act, idx) => {
+        const { R, minRedeem } = act;
+        thirdRoundCounts[idx] = secondRoundCounts[idx] * R / minRedeem
+        thirdRoundRemainCounts[idx] = RemainCounts[idx] * R / minRedeem
+    });
+    console.log(thirdRoundCounts);
+    console.log(thirdRoundRemainCounts);
+
+    /** 
+     * secondRoundCounts 代表 各個活動滿足的 總份數
+     * thirdRoundCounts 代表 各個活動 發放的 最小面額券數
+     * 
+     * RemainCounts 代表 各個活動 剩餘的 總份數
+     * thirdRoundRemainCounts 代表 各個活動 剩餘的 最小面額券數
+     * currentAmount 代表現抵 刷卡金額
+     * 
+     */
+
+    // 如果有餘券，進行細部處理
+    if (RemainCounts.some(count => count > 0)) {
+        acts.forEach((act, idx) => {
+            if (RemainCounts[idx] > 0 && act.redeemType === 'partial') {
+                stepLog += `\n開始使用 活動${idx + 1} 的券進行極限折抵測試：餘額 ${currentAmount} 元 ，可用券為 ${thirdRoundRemainCounts[idx]} 張 ${act.minRedeem} 元\n`;
+                // 嘗試極限折抵
+                while (thirdRoundRemainCounts[idx] > 0) {
+                    testAmount = currentAmount - act.minRedeem
+                    Valid = true
+                    acts.forEach((act, i) => {
+                        console.log(`${testAmount} / ${act.C} = ${Math.floor(testAmount / act.C)} < ${secondRoundCounts[i] + RemainCounts[i]}`);
+                        if ( // 不通過的條件
+                            ((testAmount / act.C) < (secondRoundCounts[i] + RemainCounts[i]))
+                        ) {
+                            Valid = false
+                        }
+                        console.log(`Valid: ${Valid}`);
+
+                    })
+                    if (Valid) {
+                        currentAmount = testAmount;
+                        thirdRoundCounts[idx] += 1
+                        thirdRoundRemainCounts[idx] -= 1
+                        stepLog += `測試成功！活動${idx + 1} 的券 多折抵 1 張 ${act.minRedeem}元：餘額 ${currentAmount} 元\n`;
+                    }
+                    else {
+                        stepLog += `活動${idx + 1} 餘券極限折抵測試結束：餘額 ${currentAmount} 元 ，可用餘券為 ${thirdRoundRemainCounts[idx]} 張 ${act.minRedeem} 元\n`;
+                        break;
+                    }
+                }
+            }
+        });
+    }
+    console.log(thirdRoundCounts);
+    console.log(thirdRoundRemainCounts);
+
+    /** 
+     * secondRoundCounts 代表 各個活動滿足的 總份數
+     * thirdRoundCounts  代表 各個活動 使用的 最小面額券數
+
+     * 
+     * RemainCounts 代表 各個活動 剩餘的 總份數
+     * thirdRoundRemainCounts  代表 各個活動 剩餘的 最小面額券數
+     * currentAmount 代表現抵 刷卡金額
+     * 
+     */
+
     let totalRebate = 0;
-    secondRoundCounts.forEach((count, idx) => totalRebate += count * acts[idx].R);
-    const finalSpend = currentAmount;
+    thirdRoundCounts.forEach((count, idx) => totalRebate += count * acts[idx].minRedeem);
+    let remainRebate = 0;
+    thirdRoundRemainCounts.forEach((count, idx) => remainRebate += count * acts[idx].minRedeem);
+
+    const finalSpend = Math.max(0, originalAmount - totalRebate);
     const discountRate = parseFloat(((finalSpend / originalAmount) * 100).toFixed(5));
 
-    let remainRebate = 0;
-    RemainCounts.forEach((count, idx) => remainRebate += count * acts[idx].R)
+    stepLog += "\n折抵整理：\n";
+    acts.forEach((act, idx) => {
+        const redeemLabel = act.redeemType === 'partial'
+            ? `可拆用 (抵用面額 ${act.minRedeem} 元)`
+            : '整券折抵';
+        stepLog += `活動${idx + 1}：${redeemLabel}\n`;
+        stepLog += `  使用券數：${thirdRoundCounts[idx]} 張，折抵 ${thirdRoundCounts[idx] * act.minRedeem} 元\n`;
+        if (thirdRoundRemainCounts[idx] > 0) {
+            stepLog += `  未使用券：${thirdRoundRemainCounts[idx]} 張 (價值 ${thirdRoundRemainCounts[idx] * act.minRedeem} 元)\n`;
+        }
+    });
 
     stepLog += `\n計算結果：\n  最終刷卡金額: ${finalSpend} 元\n  現抵回饋金額: ${totalRebate} 元\n  折數: ${discountRate} %\n`;
-    stepLog += `剩餘未使用回饋金額: ${remainRebate} 元\n  總回饋金額: ${totalRebate + remainRebate} 元\n  折數: ${(originalAmount - (totalRebate + remainRebate)) / originalAmount} %\n`;
+    stepLog += `剩餘未使用回饋金額: ${remainRebate} 元\n  可使用總回饋金額: ${totalRebate + remainRebate} 元\n  折數: ${parseFloat((((originalAmount - (totalRebate + remainRebate)) / originalAmount) * 100).toFixed(5))} %\n`;
 
-    return { finalSpend, couponsByAct: secondRoundCounts, totalRebate, discountRate, RemainCounts, remainRebate, stepLog };
+    return { finalSpend, couponsByAct: secondRoundCounts, totalRebate, discountRate, RemainCounts, remainRebate, subTotalCouponsByAct: thirdRoundCounts, subTotalRemainCounts: thirdRoundRemainCounts, stepLog };
 }
 
 document.getElementById('calc-btn').addEventListener('click', () => {
@@ -294,7 +519,7 @@ document.getElementById('calc-btn').addEventListener('click', () => {
     $('#input-amount-no-discount').val(originalAmount);
 
     const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
-    const { finalSpend, couponsByAct, totalRebate, discountRate, RemainCounts, remainRebate, stepLog } = coreCalculateWithSteps(originalAmount, sortedActs);
+    const { finalSpend, couponsByAct, totalRebate, discountRate, RemainCounts, remainRebate, subTotalCouponsByAct, subTotalRemainCounts, stepLog } = coreCalculateWithSteps(originalAmount, sortedActs);
 
     document.getElementById('final-spend').innerText = finalSpend;
     document.getElementById('total-rebate').innerText = totalRebate;
@@ -304,8 +529,6 @@ document.getElementById('calc-btn').addEventListener('click', () => {
     document.getElementById('remain-rebate').innerText = remainRebate;
     document.getElementById('total-remain-rebate').innerText = totalRebate + remainRebate;
 
-
-
     document.getElementById('input-target-spend').value = finalSpend;
     M.updateTextFields();
 
@@ -314,8 +537,14 @@ document.getElementById('calc-btn').addEventListener('click', () => {
     sortedActs.forEach((act, idx) => {
         const li = document.createElement('li');
         li.className = 'collection-item';
-        li.innerText = `滿 ${act.C} 回饋 ${act.R}：${couponsByAct[idx]} 張`;
-        ul.appendChild(li);
+        const totalCoupons = subTotalCouponsByAct[idx] + subTotalRemainCounts[idx];
+
+        if (totalCoupons > 0) {
+            const usedRate = (subTotalCouponsByAct[idx] / totalCoupons);
+            li.innerText = `滿 ${act.C} 回饋 ${act.R} 元 ${((couponsByAct[idx] + RemainCounts[idx]) * usedRate).toFixed(2)} 份，共使用  ${subTotalCouponsByAct[idx]} 張 ${act.minRedeem} 元（折抵 ${subTotalCouponsByAct[idx] * act.minRedeem} 元）`;
+            ul.appendChild(li);
+        }
+
     });
 
     const ul2 = document.getElementById('remain-coupons-list');
@@ -323,7 +552,12 @@ document.getElementById('calc-btn').addEventListener('click', () => {
     sortedActs.forEach((act, idx) => {
         const li = document.createElement('li');
         li.className = 'collection-item';
-        li.innerText = `滿 ${act.C} 回饋 ${act.R}：${RemainCounts[idx]} 張`;
+        const remainParts = [`滿 ${act.C} 回饋 ${act.R}： ${subTotalRemainCounts[idx]} 張 ${act.minRedeem} 元`];
+        if (subTotalRemainCounts[idx] > 0) {
+            remainParts.push(`價值 ${subTotalRemainCounts[idx] * act.minRedeem} 元`);
+        }
+
+        li.innerText = remainParts.join('，');
         ul2.appendChild(li);
     });
 
@@ -332,7 +566,9 @@ document.getElementById('calc-btn').addEventListener('click', () => {
     sortedActs.forEach((act, idx) => {
         const li = document.createElement('li');
         li.className = 'collection-item';
-        li.innerText = `滿 ${act.C} 回饋 ${act.R}：${couponsByAct[idx] + RemainCounts[idx]} 張`;
+        const totalCoupons = couponsByAct[idx] + RemainCounts[idx];
+        const totalValue = totalCoupons * act.R;
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：${totalCoupons} 份，共 ${subTotalCouponsByAct[idx] + subTotalRemainCounts[idx]}張 ${act.minRedeem} 元（總價值 ${totalValue} 元）`;
         ul3.appendChild(li);
     });
 
@@ -625,7 +861,7 @@ function bindInputDebounce(input) {
 // 使用者修改某天金額後，從該天開始重新計算後續
 function onDailyAmountChange(changedDayIndex) {
     const sortedActs = [...activityList].sort((a, b) => a.C - b.C);
-    const couponItems = document.querySelectorAll('#coupons-list .collection-item');
+    const couponItems = document.querySelectorAll('#total-remain-coupons-list .collection-item');
     if (couponItems.length === 0) {
         M.toast({ html: '請先執行現抵回饋計算', classes: 'red' });
         return;
@@ -635,7 +871,7 @@ function onDailyAmountChange(changedDayIndex) {
     let targetCoupons = [];
     let targetCouponsByAct = {};
     couponItems.forEach((li, idx) => {
-        const match = li.innerText.match(/：(\d+) 張/);
+        const match = li.innerText.match(/(\d+) 份/);
         targetCoupons.push(match ? Number(match[1]) : 0);
         targetCouponsByAct[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
     });
@@ -762,7 +998,7 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
     let targetCoupons = [];
     let targetCouponsByAct = {};
     couponItems.forEach((li, idx) => {
-        const match = li.innerText.match(/：(\d+) 張/);
+        const match = li.innerText.match(/(\d+) 張/);
         targetCoupons.push(match ? Number(match[1]) : 0);
         targetCouponsByAct[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
     });
@@ -802,7 +1038,7 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
     sortedActs.forEach((act, idx) => {
         const obtained = totalVouchersObtained[`${act.C}-${act.R}`] || 0;
         const required = targetCouponsByAct[`${act.C}-${act.R}`] || 0;
-        remainingVouchers[`${act.C}-${act.R}`] = obtained - required;
+        remainingVouchers[`${act.C}-${act.R}`] = obtained * act.R / act.minRedeem - required;
         notEnough = (remainingVouchers[`${act.C}-${act.R}`] < 0) || notEnough;
     });
 
@@ -826,7 +1062,7 @@ document.getElementById('split-calc-btn').addEventListener('click', () => {
         const leftoverCount = remainingVouchers[`${act.C}-${act.R}`] ?? 0;
         const li = document.createElement('li');
         li.className = 'collection-item';
-        li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 張`;
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：剩 ${leftoverCount} 張 ${act.minRedeem} 元券`;
         leftoverUL.appendChild(li);
     });
     document.getElementById('split-result').style.display = 'block';
@@ -894,7 +1130,7 @@ document.getElementById('calc-btn-no-discount').addEventListener('click', () => 
     sortedActs.forEach((act, idx) => {
         const li = document.createElement('li');
         li.className = 'collection-item';
-        li.innerText = `滿 ${act.C} 回饋 ${act.R}：${couponsByAct[idx]} 張`;
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：${couponsByAct[idx]} 份`;
         ul.appendChild(li);
     });
 
@@ -906,7 +1142,7 @@ document.getElementById('calc-btn-no-discount').addEventListener('click', () => 
     let targetCoupons = [];
     let targetCouponsByAct = {};
     couponItems.forEach((li, idx) => {
-        const match = li.innerText.match(/：(\d+) 張/);
+        const match = li.innerText.match(/(\d+) 份/);
         targetCoupons.push(match ? Number(match[1]) : 0);
         targetCouponsByAct[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
     });
@@ -917,7 +1153,7 @@ document.getElementById('calc-btn-no-discount').addEventListener('click', () => 
         let targetCouponsDisscount = [];
         let targetCouponsByActDisscount = {};
         couponItemsDisscount.forEach((li, idx) => {
-            const match = li.innerText.match(/：(\d+) 張/);
+            const match = li.innerText.match(/(\d+) 份/);
             targetCouponsDisscount.push(match ? Number(match[1]) : 0);
             targetCouponsByActDisscount[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
         });
@@ -928,7 +1164,7 @@ document.getElementById('calc-btn-no-discount').addEventListener('click', () => 
         sortedActs.forEach((act, idx) => {
             const li = document.createElement('li');
             li.className = 'collection-item';
-            li.innerText = `滿 ${act.C} 回饋 ${act.R} 多拿 ${targetCouponsByAct[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]} 張`;
+            li.innerText = `滿 ${act.C} 回饋 ${act.R} 多拿 ${targetCouponsByAct[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]} 份`;
             profit += (targetCouponsByAct[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]) * act.R;
             ul.appendChild(li);
         });
@@ -1005,7 +1241,7 @@ document.getElementById('calc-btn-no-discount').addEventListener('click', () => 
         const leftoverCount = totalVouchersObtained[`${act.C}-${act.R}`] ?? 0;
         const li = document.createElement('li');
         li.className = 'collection-item';
-        li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 張`;
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 份`;
         leftoverUL.appendChild(li);
     });
     document.getElementById('split-result-no-discount').style.display = 'block';
@@ -1016,7 +1252,7 @@ document.getElementById('calc-btn-no-discount').addEventListener('click', () => 
         let targetCouponsDisscount = [];
         let targetCouponsByActDisscount = {};
         couponItemsDisscount.forEach((li, idx) => {
-            const match = li.innerText.match(/：(\d+) 張/);
+            const match = li.innerText.match(/(\d+) 份/);
             targetCouponsDisscount.push(match ? Number(match[1]) : 0);
             targetCouponsByActDisscount[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
         });
@@ -1027,7 +1263,7 @@ document.getElementById('calc-btn-no-discount').addEventListener('click', () => 
         sortedActs.forEach((act, idx) => {
             const li = document.createElement('li');
             li.className = 'collection-item';
-            li.innerText = `滿 ${act.C} 回饋 ${act.R} 多拿 ${totalVouchersObtained[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]} 張`;
+            li.innerText = `滿 ${act.C} 回饋 ${act.R} 多拿 ${totalVouchersObtained[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]} 份`;
             profit += (totalVouchersObtained[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]) * act.R;
             ul.appendChild(li);
         });
@@ -1121,7 +1357,7 @@ function onNoDissountDailyAmountChange(changedDayIndex) {
         return;
     }
 
-    // 讀取「現抵回饋計算」階段的目標券數（也就是 couponsByAct）
+    // 讀取「『不』現抵回饋計算」階段的目標券數（也就是 couponsByAct）
     let targetCoupons = [];
     let targetCouponsByAct = {};
     couponItems.forEach((li, idx) => {
@@ -1226,19 +1462,19 @@ function onNoDissountDailyAmountChange(changedDayIndex) {
         const leftoverCount = totalVouchersObtained[`${act.C}-${act.R}`] ?? 0;
         const li = document.createElement('li');
         li.className = 'collection-item';
-        li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 張`;
+        li.innerText = `滿 ${act.C} 回饋 ${act.R}：餘 ${leftoverCount} 份`;
         leftoverUL.appendChild(li);
     });
     document.getElementById('split-result-no-discount').style.display = 'block';
 
     // 5. 比較刷卡金額
-    const couponItemsDisscount = document.querySelectorAll('#coupons-list .collection-item');
+    const couponItemsDisscount = document.querySelectorAll('#total-remain-coupons-list .collection-item');
     if (couponItemsDisscount.length !== 0 && originalFinal === Number(document.getElementById('input-amount').value)) {
         // 讀取「現抵」階段的目標券數
         let targetCouponsDisscount = [];
         let targetCouponsByActDisscount = {};
         couponItemsDisscount.forEach((li, idx) => {
-            const match = li.innerText.match(/：(\d+) 張/);
+            const match = li.innerText.match(/(\d+) 份/);
             targetCouponsDisscount.push(match ? Number(match[1]) : 0);
             targetCouponsByActDisscount[`${sortedActs[idx].C}-${sortedActs[idx].R}`] = match ? Number(match[1]) : 0;
         });
@@ -1249,7 +1485,7 @@ function onNoDissountDailyAmountChange(changedDayIndex) {
         sortedActs.forEach((act, idx) => {
             const li = document.createElement('li');
             li.className = 'collection-item';
-            li.innerText = `滿 ${act.C} 回饋 ${act.R} 多拿 ${totalVouchersObtained[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]} 張`;
+            li.innerText = `滿 ${act.C} 回饋 ${act.R} 多拿 ${totalVouchersObtained[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]} 份`;
             profit += (totalVouchersObtained[`${act.C}-${act.R}`] - targetCouponsByActDisscount[`${act.C}-${act.R}`]) * act.R;
             ul.appendChild(li);
         });

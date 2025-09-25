@@ -263,6 +263,31 @@
                             </div>
                         </div>
                         <div class="row">
+                            <div class="col s12">
+                                <p>
+                                    <label>
+                                        <input id="redeem-type-full" name="redeem-type" type="radio" value="full"
+                                            class="with-gap" checked />
+                                        <span>整券折抵</span>
+                                    </label>
+                                </p>
+                                <p>
+                                    <label>
+                                        <input id="redeem-type-partial" name="redeem-type" type="radio" value="partial"
+                                            class="with-gap" />
+                                        <span>可拆用，設定最低折抵金額</span>
+                                    </label>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="row" id="min-redeem-row" style="display: none;">
+                            <div class="input-field col s12">
+                                <input id="input-min-redeem" type="number" min="100" step="100" />
+                                <label for="input-min-redeem">最低折抵金額 (100 的倍數)</label>
+                                <span class="helper-text">例如設定 500 代表每次折抵至少 500 元</span>
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="input-field col s12">
                                 <input id="input-N" type="number" min="0" />
                                 <label for="input-N">每日限領份數 N (0 表示無限)</label>
@@ -326,13 +351,15 @@
                                     折數：<strong id="discount-rate"></strong> ％
                                 </li>
                                 <li class="collection-item">
-                                    <span>各活動應返還店家的折抵券張數：</span>
+                                    <span>各活動<strong class="red-text"></strong>應返還店家</strong>的折抵券張數：</span>
                                     <ul id="coupons-list" class="collection" style="margin-top: 8px;"></ul>
                                 </li>
                                 <li class="collection-item">
                                     剩餘未使用回饋金額(餘券金額)：<strong id="remain-rebate" class="green-text"></strong> 元
-                                    <h6>⚠️有餘券時，上方回饋金額可能還有折抵空間⚠️</h6>
                                 </li>
+                                <!-- <li class="collection-item" id="lost-rebate-item" style="display: none;">
+                                    因最低折抵金額限制未使用：<strong id="lost-rebate" class="orange-text"></strong> 元
+                                </li> -->
                                 <li class="collection-item">
                                     <span>各活動的折抵券剩餘張數：</span>
                                     <ul id="remain-coupons-list" class="collection" style="margin-top: 8px;"></ul>
@@ -383,7 +410,7 @@
                                     <h6>⚠️不一定是最佳解，需要注意返還後剩餘的券是否足夠⚠️</h6>
                                 </li>
                                 <li class="collection-item">
-                                    至少需要天數：<strong id="split-days"></strong> 天 <strong id="split-alert"
+                                    至少需要天數：<strong id="split-days" class="red-text"></strong> 天 <strong id="split-alert"
                                         class="red-text"> </strong>
                                 </li>
                                 <li class="collection-item">
