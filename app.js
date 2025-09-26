@@ -319,7 +319,61 @@ activityContainer.addEventListener('click', (e) => {
     }
 });
 
-document.getElementById('modal-save-btn').addEventListener('click', () => {
+$("#modal-save-btn").on("click", function () {
+    const C = Number(document.getElementById('input-C').value);
+    const R = Number(document.getElementById('input-R').value);
+    let N = document.getElementById('input-N').value;
+    N = N === '' || Number(N) <= 0 ? Infinity : Number(N);
+
+    if (isNaN(C) || C <= 0) {
+        M.toast({ html: 'C 必須為大於 0 的數值', classes: 'red' });
+        return;
+    }
+    if (isNaN(R) || R <= 0) {
+        M.toast({ html: 'R 必須為大於 0 的數值', classes: 'red' });
+        return;
+    }
+
+    const redeemTypeRadios = document.querySelectorAll('input[name="redeem-type"]');
+    const checkedRedeemRadio = Array.from(redeemTypeRadios).find(radio => radio.checked);
+    const redeemType = checkedRedeemRadio ? checkedRedeemRadio.value : 'full';
+    let minRedeem = null;
+    if (redeemType === 'partial') {
+        const minRedeemInput = document.getElementById('input-min-redeem').value;
+        const parsedMin = Number(minRedeemInput);
+        if (Number.isNaN(parsedMin) || parsedMin < 100) {
+            M.toast({ html: '最低折抵金額需大於等於 100', classes: 'red' });
+            return;
+        }
+        if (parsedMin % 100 !== 0) {
+            M.toast({ html: '最低折抵金額需為 100 的倍數', classes: 'red' });
+            return;
+        }
+        if (parsedMin > R) {
+            M.toast({ html: '最低折抵金額不得大於回饋金額', classes: 'red' });
+            return;
+        }
+        minRedeem = parsedMin;
+    }
+    else {
+        minRedeem = R
+    }
+
+    const payload = { C, R, N, redeemType, minRedeem };
+
+    if (editIndex !== null) {
+        updateActivity(editIndex, payload);
+        M.toast({ html: '活動已更新', classes: 'green' });
+    } else {
+        addActivity(payload);
+        M.toast({ html: '活動已新增', classes: 'green' });
+    }
+
+    renderActivities();
+    M.Modal.getInstance(document.getElementById('modal-activity-form')).close();
+});
+
+document.getElementById('modal-save-btn2').addEventListener('click', () => {
     const C = Number(document.getElementById('input-C').value);
     const R = Number(document.getElementById('input-R').value);
     let N = document.getElementById('input-N').value;
