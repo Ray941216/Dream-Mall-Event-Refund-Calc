@@ -17,6 +17,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icons/icon-180.png">
 
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
     <!-- Materialize CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -124,6 +126,80 @@
         .input-field input[type="number"]:focus {
             border-bottom: 1px solid var(--primary-color) !important;
             box-shadow: 0 1px 0 0 var(--primary-color) !important;
+        }
+
+        .number-input-field {
+            position: relative;
+            padding-right: 96px;
+            padding-bottom: 32px;
+        }
+
+        .number-input-field input[type="number"] {
+            padding-right: 0;
+        }
+
+        .number-input-field .helper-text {
+            position: absolute;
+            left: 0;
+            right: 96px;
+            bottom: 0;
+            margin: 0;
+        }
+
+        .number-stepper-controls {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 1;
+        }
+
+        .number-stepper-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 19px;
+            border: none;
+            background-color: var(--accent-color);
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        .number-stepper-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .number-stepper-btn:active {
+            transform: scale(0.94);
+        }
+
+        .number-stepper-btn:focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 600px) {
+            .number-input-field {
+                padding-right: 120px;
+                padding-bottom: 40px;
+            }
+
+            .number-input-field .helper-text {
+                right: 120px;
+            }
+
+            .number-stepper-btn {
+                width: 42px;
+                height: 42px;
+                font-size: 1.6rem;
+            }
         }
 
         body {
@@ -248,18 +324,32 @@
         <div id="modal-activity-form" class="modal">
             <div class="modal-content">
                 <h5 id="modal-title">新增活動</h5>
+                <h6>⚠️有修改記得要 <a href="#!" id="modal-save-btn" class="modal-close waves-effect waves-green btn">儲存</a> ⚠️
+                </h6>
                 <div class="row">
                     <form id="activity-form" class="col s12">
                         <div class="row">
-                            <div class="input-field col s12">
-                                <input id="input-C" type="number" min="1" required />
+                            <div class="input-field col s12 number-input-field">
+                                <input id="input-C" type="number" min="1" step="100" required />
                                 <label for="input-C">滿額門檻 C (元)</label>
+                                <div class="number-stepper-controls">
+                                    <button type="button" class="number-stepper-btn" data-stepper-target="input-C"
+                                        data-stepper-direction="-1" aria-label="減少滿額門檻">-</button>
+                                    <button type="button" class="number-stepper-btn" data-stepper-target="input-C"
+                                        data-stepper-direction="1" aria-label="增加滿額門檻">+</button>
+                                </div>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s12">
-                                <input id="input-R" type="number" min="1" required />
+                            <div class="input-field col s12 number-input-field">
+                                <input id="input-R" type="number" min="1" step="100" required />
                                 <label for="input-R">回饋金額 R (元)</label>
+                                <div class="number-stepper-controls">
+                                    <button type="button" class="number-stepper-btn" data-stepper-target="input-R"
+                                        data-stepper-direction="-1" aria-label="減少回饋金額">-</button>
+                                    <button type="button" class="number-stepper-btn" data-stepper-target="input-R"
+                                        data-stepper-direction="1" aria-label="增加回饋金額">+</button>
+                                </div>
                             </div>
                         </div>
                         <div class="row">
@@ -275,22 +365,35 @@
                                     <label>
                                         <input id="redeem-type-partial" name="redeem-type" type="radio" value="partial"
                                             class="with-gap" />
-                                        <span>可拆用，設定最低折抵金額</span>
+                                        <span>可拆用，設定最小折抵券金額</span>
                                     </label>
                                 </p>
                             </div>
                         </div>
                         <div class="row" id="min-redeem-row" style="display: none;">
-                            <div class="input-field col s12">
+                            <div class="input-field col s12 number-input-field">
                                 <input id="input-min-redeem" type="number" min="100" step="100" />
-                                <label for="input-min-redeem">最低折抵金額 (100 的倍數)</label>
-                                <span class="helper-text">例如設定 500 代表每次折抵至少 500 元</span>
+                                <label for="input-min-redeem">折抵券面額 (100 的倍數)</label>
+                                <div class="number-stepper-controls">
+                                    <button type="button" class="number-stepper-btn"
+                                        data-stepper-target="input-min-redeem" data-stepper-direction="-1"
+                                        aria-label="減少最低折抵金額">-</button>
+                                    <button type="button" class="number-stepper-btn"
+                                        data-stepper-target="input-min-redeem" data-stepper-direction="1"
+                                        aria-label="增加最低折抵金額">+</button>
+                                </div>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="input-field col s12">
+                            <div class="input-field col s12 number-input-field">
                                 <input id="input-N" type="number" min="0" />
                                 <label for="input-N">每日限領份數 N (0 表示無限)</label>
+                                <div class="number-stepper-controls">
+                                    <button type="button" class="number-stepper-btn" data-stepper-target="input-N"
+                                        data-stepper-direction="-1" aria-label="減少每日限領份數">-</button>
+                                    <button type="button" class="number-stepper-btn" data-stepper-target="input-N"
+                                        data-stepper-direction="1" aria-label="增加每日限領份數">+</button>
+                                </div>
                             </div>
                         </div>
                     </form>

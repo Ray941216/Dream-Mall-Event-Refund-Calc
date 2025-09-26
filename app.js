@@ -94,6 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const collElems = document.querySelectorAll('.collapsible');
     M.Collapsible.init(collElems);
 
+    registerNumberSteppers();
+
     loadActivities();
     renderActivities();
 
@@ -133,6 +135,75 @@ function toggleMinRedeemRow(redeemType) {
         row.style.display = 'none';
     }
     M.updateTextFields();
+}
+
+function registerNumberSteppers() {
+    const buttons = document.querySelectorAll('.number-stepper-btn');
+    buttons.forEach(button => {
+        const targetId = button.dataset.stepperTarget;
+        const direction = Number(button.dataset.stepperDirection);
+        if (!targetId || Number.isNaN(direction)) {
+            return;
+        }
+        const targetInput = document.getElementById(targetId);
+        if (!targetInput) {
+            return;
+        }
+        button.addEventListener('click', () => {
+            adjustNumberInputValue(targetInput, direction);
+        });
+    });
+}
+
+function adjustNumberInputValue(input, direction) {
+    if (!input) {
+        return;
+    }
+
+    const parsedStep = Number(input.step);
+    const step = !Number.isNaN(parsedStep) && parsedStep > 0 ? parsedStep : 1;
+    const minValue = input.min === '' ? null : Number(input.min);
+    const maxValue = input.max === '' ? null : Number(input.max);
+    const precision = (step.toString().split('.')[1] || '').length;
+    const factor = Math.pow(10, precision);
+
+    const currentValue = Number(input.value);
+    let nextValue;
+
+    if (Number.isNaN(currentValue)) {
+        if (direction > 0) {
+            if (minValue !== null) {
+                nextValue = Math.max(minValue, step);
+            } else {
+                nextValue = step;
+            }
+        } else {
+            nextValue = minValue !== null ? minValue : 0;
+        }
+    } else {
+        nextValue = currentValue + direction * step;
+    }
+
+    if (minValue !== null && nextValue < minValue) {
+        nextValue = minValue;
+    }
+    if (maxValue !== null && nextValue > maxValue) {
+        nextValue = maxValue;
+    }
+
+    nextValue = Math.round(nextValue * factor) / factor;
+
+    if (!Number.isFinite(nextValue)) {
+        return;
+    }
+
+    input.value = String(nextValue);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    input.focus();
+    if (typeof M !== 'undefined' && M.updateTextFields) {
+        M.updateTextFields();
+    }
 }
 
 // function renderActivities() {
