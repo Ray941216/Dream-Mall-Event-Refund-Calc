@@ -1,6 +1,6 @@
 // sw.js
 
-const CACHE_NAME = 'msm-coupon-cache-v1';
+const CACHE_NAME = 'msm-coupon-cache-v2';
 const URLS_TO_CACHE = [
     '/',
     '/index.html',
@@ -11,7 +11,6 @@ const URLS_TO_CACHE = [
     'https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js',
     'https://code.jquery.com/jquery-3.7.1.min.js',
     'https://fonts.googleapis.com/icon?family=Material+Icons',
-    'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7714309118972764',
     'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
@@ -39,7 +38,10 @@ self.addEventListener('activate', (event) => {
 });
 
 // 攔截所有 fetch 請求，優先從快取拿，若沒有再去網路抓
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', (event) => {    // 廣告 / 分析相關請求一律走網路，不攜截、不快取（AdSense 需要即時載入）
+    if (/googlesyndication\.com|googleadservices\.com|doubleclick\.net|google-analytics\.com|googletagservices\.com|adtrafficquality\.google/.test(event.request.url)) {
+        return;
+    }
     event.respondWith(
         caches.match(event.request).then((cachedRes) => {
             if (cachedRes) {
